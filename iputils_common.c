@@ -2,7 +2,9 @@
 
 #include <errno.h>
 #include <stdarg.h>
-#include <stdio_ext.h>
+#if defined(__linux__)
+# include <stdio_ext.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,11 +18,17 @@
 #ifdef HAVE_ERROR_H
 # include <error.h>
 #else
+static const char *iputils_program_name = "iputils";
 void error(int status, int errnum, const char *format, ...)
 {
 	va_list ap;
-
-	fprintf(stderr, "%s: ", program_invocation_name);
+#if defined(__linux__)
+	extern char *program_invocation_name;
+	const char *progname = program_invocation_name;
+#else
+	const char *progname = iputils_program_name;
+#endif
+	fprintf(stderr, "%s: ", progname);
 	va_start(ap, format);
 	vfprintf(stderr, format, ap);
 	va_end(ap);

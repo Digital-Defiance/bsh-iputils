@@ -23,8 +23,22 @@
 # include <locale.h>
 #endif
 
+
 #ifdef ENABLE_NLS
-# include <libintl.h>
+# if defined(__APPLE__)
+#  include <nl_types.h> /* macOS gettext stub */
+#  ifndef HAVE_GETTEXT
+	static inline const char *gettext(const char *msgid) { return msgid; }
+#  endif
+#  ifndef bindtextdomain
+#   define bindtextdomain(Domain, Directory) /* empty on macOS */
+#  endif
+#  ifndef textdomain
+#   define textdomain(Domain) /* empty on macOS */
+#  endif
+# else
+#  include <libintl.h>
+# endif
 # define _(Text) gettext (Text)
 #else
 # undef bindtextdomain
@@ -69,6 +83,10 @@
 # include <error.h>
 #else
 extern void error(int status, int errnum, const char *format, ...);
+#endif
+
+#ifndef __linux__
+# define program_invocation_short_name getprogname()
 #endif
 
 extern int close_stream(FILE *stream);

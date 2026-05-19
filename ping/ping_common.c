@@ -39,9 +39,7 @@
 #define HZ sysconf(_SC_CLK_TCK)
 #endif
 
-#ifndef HAVE_LIBCAP
-static uid_t euid;
-#endif
+
 
 void usage(void)
 {
@@ -99,9 +97,10 @@ void usage(void)
 	exit(2);
 }
 
+
+#if defined(__linux__)
 void limit_capabilities(struct ping_rts *rts)
 {
-#ifdef HAVE_LIBCAP
 	cap_t cap_cur_p;
 	cap_t cap_p;
 	cap_flag_value_t cap_ok;
@@ -130,75 +129,15 @@ void limit_capabilities(struct ping_rts *rts)
 		ping_error(rts, -1, errno, "prctl");
 	cap_free(cap_p);
 	cap_free(cap_cur_p);
-#else
-	euid = geteuid();
-#endif
 	rts->uid = getuid();
-#ifndef HAVE_LIBCAP
-	if (seteuid(rts->uid))
-		ping_error(rts, -1, errno, "setuid");
-#endif
-}
-
-#ifdef HAVE_LIBCAP
-int modify_capability(cap_value_t cap, cap_flag_value_t on)
-{
-	cap_t cap_p = cap_get_proc();
-	cap_flag_value_t cap_ok;
-	int rc = -1;
-
-	if (!cap_p) {
-		error(0, errno, "cap_get_proc");
-		goto out;
-	}
-
-	cap_ok = CAP_CLEAR;
-	cap_get_flag(cap_p, cap, CAP_PERMITTED, &cap_ok);
-	if (cap_ok == CAP_CLEAR) {
-		rc = on ? -1 : 0;
-		goto out;
-	}
-
-	cap_set_flag(cap_p, CAP_EFFECTIVE, 1, &cap, on);
-
-	if (cap_set_proc(cap_p) < 0) {
-		error(0, errno, "cap_set_proc");
-		goto out;
-	}
-
-	cap_free(cap_p);
-	cap_p = NULL;
-
-	rc = 0;
-out:
-	if (cap_p)
-		cap_free(cap_p);
-	return rc;
 }
 #else
-int modify_capability(int on)
-{
-	if (seteuid(on ? euid : getuid())) {
-		error(0, errno, "seteuid");
-		return -1;
-	}
-
-	return 0;
-}
+void limit_capabilities(struct ping_rts *rts) { rts->uid = getuid(); }
 #endif
 
-void drop_capabilities(void)
-{
-#ifdef HAVE_LIBCAP
-	cap_t cap = cap_init();
-	if (cap_set_proc(cap) < 0)
-		error(-1, errno, "cap_set_proc");
-	cap_free(cap);
-#else
-	if (setuid(getuid()))
-		error(-1, errno, "setuid");
-#endif
-}
+
+
+void drop_capabilities(void) { }
 
 /* Fills all the outpack, excluding ICMP header, but _including_
  * timestamp area with supplied pattern.

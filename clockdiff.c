@@ -58,7 +58,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
-#include <linux/types.h>
+#if defined(__linux__)
+# include <linux/types.h>
+#endif
 #include <math.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -80,50 +82,9 @@
 # include <sys/capability.h>
 #endif
 
+#include "clockdiff_compat.h"
+#include "clockdiff.h"
 #include "iputils_common.h"
-
-enum {
-	RANGE = 1,		/* best expected round-trip time, ms */
-	MSGS = 50,
-	TRIALS = 10,
-
-	GOOD = 0,
-	UNREACHABLE = 2,
-	NONSTDTIME = 3,
-	BREAK = 4,
-	CONTINUE = 5,
-	HOSTDOWN = 0x7fffffff,
-
-	BIASP = 43199999,
-	BIASN = -43200000,
-	MODULO =  86400000,
-	PROCESSING_TIME	= 0,	/* ms. to reduce error in measurement */
-
-	PACKET_IN = 1024
-};
-
-enum {
-	time_format_ctime,
-	time_format_iso
-};
-
-struct run_state {
-	int interactive;
-	uint16_t id;
-	int sock_raw;
-	struct sockaddr_in server;
-	int ip_opt_len;
-	int measure_delta;
-	int measure_delta1;
-	unsigned short seqno;
-	unsigned short seqno0;
-	unsigned short acked;
-	long rtt;
-	long min_rtt;
-	long rtt_sigma;
-	char *hisname;
-	int time_format;
-};
 
 struct measure_vars {
 	struct timespec ts1;
@@ -339,7 +300,7 @@ static int measure_inner_loop(struct run_state *ctl, struct measure_vars *mv)
 /*
  * Measures the differences between machines' clocks using ICMP timestamp messages.
  */
-static int measure(struct run_state *ctl)
+int measure(struct run_state *ctl)
 {
 	struct measure_vars mv = {
 		.min1 = 0x7fffffff,
@@ -433,7 +394,7 @@ static int measure(struct run_state *ctl)
 	return GOOD;
 }
 
-static void drop_rights(void)
+void drop_rights(void)
 {
 #ifdef HAVE_LIBCAP
 	cap_t caps = cap_init();
@@ -510,6 +471,7 @@ static void parse_opts(struct run_state *ctl, int argc, char **argv)
 		}
 }
 
+#ifndef BCLOCKDIFF_BUILD
 int main(int argc, char **argv)
 {
 	struct run_state ctl = {
@@ -634,3 +596,4 @@ int main(int argc, char **argv)
 	}
 	exit(0);
 }
+#endif /* BCLOCKDIFF_BUILD */

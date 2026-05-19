@@ -28,3 +28,7 @@
 #define NEXTHDR_MOBILITY	135	/* Mobility header. */
 
 #endif /* IPV6_H */
+
+#ifndef IPV6_FLOWINFO_FLOWLABEL
+#define IPV6_FLOWINFO_FLOWLABEL 0x000fffff
+#endif

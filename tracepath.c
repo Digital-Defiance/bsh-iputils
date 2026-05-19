@@ -31,10 +31,12 @@
  * Keep linux/ includes after standard headers.
  * https://github.com/iputils/iputils/issues/168
  */
-#include <linux/errqueue.h>
-#include <linux/icmp.h>
-#include <linux/icmpv6.h>
-#include <linux/types.h>
+#if defined(__linux__)
+# include <linux/errqueue.h>
+# include <linux/icmp.h>
+# include <linux/icmpv6.h>
+# include <linux/types.h>
+#endif
 
 #include "iputils_common.h"
 

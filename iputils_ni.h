@@ -3,7 +3,9 @@
 /*
  * Shared network information definitions.
  */
-#include <asm/byteorder.h>
+#if defined(__linux__)
+# include <asm/byteorder.h>
+#endif
 
 #define IPUTILS_NI_ICMP6_QUERY		139
 #define	IPUTILS_NI_ICMP6_REPLY		140

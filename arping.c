@@ -15,9 +15,11 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <ifaddrs.h>
-#include <linux/if_ether.h>
-#include <linux/if_packet.h>
-#include <linux/rtnetlink.h>
+#if defined(__linux__)
+# include <linux/if_ether.h>
+# include <linux/if_packet.h>
+# include <linux/rtnetlink.h>
+#endif
 #include <netdb.h>
 #include <net/if_arp.h>
 #include <net/if.h>
@@ -32,10 +34,7 @@
 #include <sys/timerfd.h>
 #include <unistd.h>
 
-#ifdef HAVE_LIBCAP
-# include <sys/capability.h>
-# include <sys/prctl.h>
-#endif
+
 
 #include "iputils_common.h"
 
@@ -83,11 +82,7 @@ struct run_state {
 	int received;
 	int brd_recv;
 	int req_recv;
-#ifdef HAVE_LIBCAP
-	cap_flag_value_t cap_raw;
-#else
 	uid_t euid;
-#endif
 	unsigned int
 		advert:1,
 		broadcast_only:1,
@@ -98,9 +93,7 @@ struct run_state {
 		unsolicited:1;
 };
 
-#ifdef HAVE_LIBCAP
-static const cap_value_t caps[] = { CAP_NET_RAW };
-#endif
+
 
 /*
  * All includes, definitions, struct declarations, and global variables are
@@ -147,93 +140,9 @@ static void usage(void)
 	exit(2);
 }
 
-#ifdef HAVE_LIBCAP
-static void limit_capabilities(struct run_state *ctl)
-{
-	cap_t cap_p;
-
-	cap_p = cap_get_proc();
-	if (!cap_p)
-		error(-1, errno, "cap_get_proc");
-
-	cap_get_flag(cap_p, CAP_NET_RAW, CAP_PERMITTED, &ctl->cap_raw);
-
-	if (ctl->cap_raw != CAP_CLEAR) {
-		if (cap_clear(cap_p) < 0)
-			error(-1, errno, "cap_clear");
-
-		cap_set_flag(cap_p, CAP_PERMITTED, 1, caps, CAP_SET);
-
-		if (cap_set_proc(cap_p) < 0) {
-			error(0, errno, "cap_set_proc");
-			if (errno != EPERM)
-				exit(-1);
-		}
-	}
-
-	if (prctl(PR_SET_KEEPCAPS, 1) < 0)
-		error(-1, errno, "prctl");
-
-	if (setuid(getuid()) < 0)
-		error(-1, errno, "setuid");
-
-	if (prctl(PR_SET_KEEPCAPS, 0) < 0)
-		error(-1, errno, "prctl");
-
-	cap_free(cap_p);
-}
-
-static int modify_capability_raw(struct run_state *ctl, int on)
-{
-	cap_t cap_p;
-
-	if (ctl->cap_raw != CAP_SET)
-		return on ? -1 : 0;
-
-	cap_p = cap_get_proc();
-	if (!cap_p)
-		error(-1, errno, "cap_get_proc");
-
-	cap_set_flag(cap_p, CAP_EFFECTIVE, 1, caps, on ? CAP_SET : CAP_CLEAR);
-
-	if (cap_set_proc(cap_p) < 0)
-		error(-1, errno, "cap_set_proc");
-
-	cap_free(cap_p);
-	return 0;
-}
-
-static void drop_capabilities(void)
-{
-	cap_t cap_p = cap_init();
-
-	if (!cap_p)
-		error(-1, errno, "cap_init");
-
-	if (cap_set_proc(cap_p) < 0)
-		error(-1, errno, "cap_set_proc");
-
-	cap_free(cap_p);
-}
-#else	/* HAVE_LIBCAP */
-static void limit_capabilities(struct run_state *ctl)
-{
-	ctl->euid = geteuid();
-}
-
-static int modify_capability_raw(struct run_state *ctl, int on)
-{
-	if (setuid(on ? ctl->euid : getuid()))
-		error(-1, errno, "setuid");
-	return 0;
-}
-
-static void drop_capabilities(void)
-{
-	if (setuid(getuid()) < 0)
-		error(-1, errno, "setuid");
-}
-#endif	/* HAVE_LIBCAP */
+static void limit_capabilities(struct run_state *ctl) { ctl->euid = geteuid(); }
+static int modify_capability_raw(struct run_state *ctl, int on) { (void)ctl; (void)on; return 0; }
+static void drop_capabilities(void) { }
 
 static inline int enable_capability_raw(struct run_state *ctl)
 {

@@ -1,0 +1,309 @@
+/*
+ * baudit.c — BrightSpace multi-anchor distance bounding
+ *
+ * Measures the RTT from this machine to a target, then computes the
+ * "constraint ring" (radius = RTT/2 at speed of light) around each
+ * measurement anchor.  With multiple anchors from different vantage points,
+ * it bounds where the target can physically be.
+ *
+ * Self anchor: probed live via ping.  Additional anchors supplied via
+ * --anchor=lat,lon,rtt_ms (can repeat).  Useful for pasting in RTT values
+ * measured from other known locations (cloud VMs, friends, etc.)
+ *
+ * Output:
+ *   - Per-anchor ring: center, radius_km, whether geoIP is inside
+ *   - Centroid estimate: average of anchor centers weighted by 1/radius
+ *   - Consistency score: fraction of anchors whose ring contains geoIP
+ *   - If all rings agree: "consistent — target likely near <city>"
+ *   - If rings disagree: "inconsistent — possible anycast / VPN / bad geoIP"
+ *
+ * Environment:
+ *   BSPACE_COORD=lat,lon    My position (no history leak)
+ *   BSPACE_ECEF=x,y,z       My ECEF in BrightMeters (no history leak)
+ */
+
+#include "../brightspace.h"
+
+#define MAX_ANCHORS 32
+
+typedef struct {
+    double lat, lon;
+    double rtt_ms;
+    char   label[64];   /* optional: city name or description */
+    int    from_cli;    /* 1 = from --anchor=, 0 = self */
+} anchor_t;
+
+static void usage(void)
+{
+    fprintf(stderr,
+        "\nUsage\n"
+        "  baudit [options] <destination>\n"
+        "\nOptions:\n"
+        "  --anchor=lat,lon,rtt_ms[,label]  Add an external measurement anchor.\n"
+        "                                   Repeat for multiple anchors.\n"
+        "                                   rtt_ms is the round-trip time in ms\n"
+        "                                   from that location to the target.\n"
+        "  --my-coord=lat,lon               My position (goes in shell history)\n"
+        "  --my-ecef=x,y,z                  My ECEF position (BrightMeters)\n"
+        "  -c <count>                       Ping count for self-probe (default: 5)\n"
+        "\nEnvironment variables (no shell-history exposure):\n"
+        "  BSPACE_COORD=lat,lon             My position\n"
+        "  BSPACE_ECEF=x,y,z                My ECEF position\n"
+        "\nExample:\n"
+        "  # Probe from here + paste in two VPS measurements:\n"
+        "  baudit --anchor=51.5074,-0.1278,42.3,London \\\n"
+        "         --anchor=35.6762,139.6503,118.7,Tokyo \\\n"
+        "         8.8.8.8\n");
+    exit(2);
+}
+
+/* Parse "--anchor=lat,lon,rtt_ms[,label]" */
+static int parse_anchor(const char *s, anchor_t *a)
+{
+    double lat, lon, rtt;
+    int n = 0;
+    if (sscanf(s, "%lf,%lf,%lf%n", &lat, &lon, &rtt, &n) < 3) return 0;
+    a->lat    = lat;
+    a->lon    = lon;
+    a->rtt_ms = rtt;
+    a->from_cli = 1;
+    /* optional label after third comma */
+    const char *rest = s + n;
+    if (*rest == ',') {
+        rest++;
+        int l = (int)strlen(rest);
+        if (l >= (int)sizeof(a->label)) l = (int)sizeof(a->label) - 1;
+        strncpy(a->label, rest, (size_t)l);
+        a->label[l] = '\0';
+    }
+    return 1;
+}
+
+/* Compute the centroid weighted by 1/radius_km (tighter constraints count more) */
+static void weighted_centroid(const anchor_t *anchors, const double *radii,
+                               int n, double *out_lat, double *out_lon)
+{
+    double wlat = 0, wlon = 0, wtot = 0;
+    for (int i = 0; i < n; ++i) {
+        if (radii[i] <= 0.0) continue;
+        double w = 1.0 / radii[i];
+        wlat += anchors[i].lat * w;
+        wlon += anchors[i].lon * w;
+        wtot += w;
+    }
+    if (wtot > 0.0) {
+        *out_lat = wlat / wtot;
+        *out_lon = wlon / wtot;
+    } else {
+        *out_lat = 0.0;
+        *out_lon = 0.0;
+    }
+}
+
+int main(int argc, char **argv)
+{
+    bs_ecef_t my_ecef;
+    memset(&my_ecef, 0, sizeof(my_ecef));
+    int have_my_ecef = 0;
+
+    bs_geo_t my_geo;
+    memset(&my_geo, 0, sizeof(my_geo));
+
+    anchor_t anchors[MAX_ANCHORS];
+    int nanchors = 0;
+    int ping_count = 5;
+    char *dest = NULL;
+
+    for (int i = 1; i < argc; ++i) {
+        if (strncmp(argv[i], "--my-ecef=", 10) == 0) {
+            have_my_ecef = bs_parse_ecef(argv[i] + 10, &my_ecef);
+        } else if (strncmp(argv[i], "--my-coord=", 11) == 0) {
+            double lat, lon;
+            if (bs_parse_latlon(argv[i] + 11, &lat, &lon)) {
+                my_geo.lat = lat; my_geo.lon = lon; my_geo.valid = 1;
+                snprintf(my_geo.tag, sizeof(my_geo.tag), "[coord]");
+            }
+        } else if (strncmp(argv[i], "--anchor=", 9) == 0) {
+            if (nanchors < MAX_ANCHORS) {
+                anchor_t a;
+                memset(&a, 0, sizeof(a));
+                if (parse_anchor(argv[i] + 9, &a))
+                    anchors[nanchors++] = a;
+                else
+                    fprintf(stderr, "baudit: bad --anchor format: %s\n", argv[i] + 9);
+            }
+        } else if (strcmp(argv[i], "-c") == 0 && i + 1 < argc) {
+            ping_count = atoi(argv[++i]);
+            if (ping_count < 1 || ping_count > 100) ping_count = 5;
+        } else if (strncmp(argv[i], "-c", 2) == 0) {
+            ping_count = atoi(argv[i] + 2);
+            if (ping_count < 1 || ping_count > 100) ping_count = 5;
+        } else if (strcmp(argv[i], "-h") == 0
+                || strcmp(argv[i], "--help") == 0) {
+            usage();
+        } else if (argv[i][0] != '-') {
+            dest = argv[i];
+        }
+    }
+    if (!dest) usage();
+
+    bs_load_env(&my_ecef, &have_my_ecef, &my_geo);
+    if (!have_my_ecef && !my_geo.valid)
+        my_geo = bs_geolocate(NULL);
+    if (have_my_ecef && !my_geo.valid)
+        bs_ecef_to_geo(my_ecef, &my_geo, "[ecef]");
+
+    /* Resolve and geolocate target */
+    char dest_ip[64] = "";
+    bs_resolve_to_ip(dest, dest_ip, sizeof(dest_ip));
+    bs_geo_t tgt_geo;
+    memset(&tgt_geo, 0, sizeof(tgt_geo));
+    if (dest_ip[0])
+        tgt_geo = bs_geolocate(dest_ip);
+
+    /* Probe self → target */
+    double self_rtt_ms = -1.0;
+    if (my_geo.valid) {
+        fprintf(stderr, "Probing %s (%d pings) ...\n", dest, ping_count);
+        char cmd[256];
+        snprintf(cmd, sizeof(cmd), "ping -c %d %s 2>&1", ping_count, dest);
+        FILE *fp = popen(cmd, "r");
+        if (fp) {
+            char buf[256];
+            while (fgets(buf, sizeof(buf), fp)) {
+                const char *eq;
+                if ((eq = strstr(buf, "=")) && strstr(buf, "min/avg/max")) {
+                    double vmin, vavg;
+                    if (sscanf(eq + 1, " %lf/%lf", &vmin, &vavg) >= 2)
+                        self_rtt_ms = vavg;
+                }
+            }
+            pclose(fp);
+        }
+    }
+
+    /* Build self anchor */
+    anchor_t self_anchor;
+    memset(&self_anchor, 0, sizeof(self_anchor));
+    if (my_geo.valid && self_rtt_ms > 0.0) {
+        self_anchor.lat    = my_geo.lat;
+        self_anchor.lon    = my_geo.lon;
+        self_anchor.rtt_ms = self_rtt_ms;
+        self_anchor.from_cli = 0;
+        char lbl[80] = "";
+        bs_geo_label(&my_geo, lbl, sizeof(lbl));
+        snprintf(self_anchor.label, sizeof(self_anchor.label),
+                 "%s %s", lbl[0] ? lbl : "self", my_geo.tag);
+
+        /* Prepend self anchor before CLI anchors */
+        if (nanchors < MAX_ANCHORS) {
+            memmove(&anchors[1], &anchors[0],
+                    (size_t)nanchors * sizeof(anchor_t));
+            anchors[0] = self_anchor;
+            nanchors++;
+        }
+    }
+
+    /* ── Print target info ───────────────────────────────── */
+    printf("baudit — %s", dest);
+    if (dest_ip[0] && strcmp(dest_ip, dest) != 0)
+        printf(" (%s)", dest_ip);
+    if (tgt_geo.valid) {
+        char lbl[80] = "";
+        bs_geo_label(&tgt_geo, lbl, sizeof(lbl));
+        if (lbl[0]) printf("  %s", lbl);
+        printf("  %s", tgt_geo.tag);
+    }
+    printf("\n");
+
+    if (nanchors == 0) {
+        fprintf(stderr, "baudit: no anchors — could not probe or geolocate self\n");
+        return 1;
+    }
+
+    /* ── Per-anchor analysis ─────────────────────────────── */
+    printf("\n");
+    printf("  %-28s  %9s  %9s  %9s  %10s  %8s  %8s  %8s\n",
+           "anchor", "x(BM)", "y(BM)", "z(BM)", "rtt(ms)", "ring(km)", "tgt_dist", "in_ring?");
+    printf("  %-28s  %9s  %9s  %9s  %10s  %8s  %8s  %8s\n",
+           "----------------------------",
+           "---------", "---------", "---------",
+           "----------",
+           "--------", "--------", "--------");
+
+    double radii[MAX_ANCHORS];
+    int    inside[MAX_ANCHORS];
+    int    n_inside = 0;
+
+    for (int i = 0; i < nanchors; ++i) {
+        const anchor_t *a = &anchors[i];
+        /* Ring radius = RTT/2 converted to km (speed of light in fiber ~c/1.5,
+         * but we use c as the absolute upper bound — ring gives min separation) */
+        double radius_km = (a->rtt_ms / 2.0) * BS_KM_PER_MBM;
+        radii[i] = radius_km;
+
+        double tgt_dist_km = -1.0;
+        int    in_ring     = 0;
+        if (tgt_geo.valid) {
+            tgt_dist_km = bs_haversine_km(a->lat, a->lon,
+                                          tgt_geo.lat, tgt_geo.lon);
+            in_ring = (tgt_dist_km <= radius_km);
+            if (in_ring) n_inside++;
+        }
+        inside[i] = in_ring;
+
+        char dist_buf[16] = "?", in_buf[8] = "?";
+        if (tgt_dist_km >= 0.0)
+            snprintf(dist_buf, sizeof(dist_buf), "%.0f", tgt_dist_km);
+        if (tgt_geo.valid)
+            snprintf(in_buf, sizeof(in_buf), "%s", in_ring ? "yes" : "NO");
+
+        double ax, ay, az;
+        bs_latlon_to_ecef(a->lat, a->lon, &ax, &ay, &az);
+        printf("  %-28s  %9.5f  %9.5f  %9.5f  %10.3f  %8.0f  %8s  %8s\n",
+               a->label[0] ? a->label : "(unnamed)",
+               ax, ay, az, a->rtt_ms,
+               radius_km, dist_buf, in_buf);
+    }
+
+    /* ── Centroid estimate ───────────────────────────────── */
+    printf("\n");
+    double est_lat = 0, est_lon = 0;
+    weighted_centroid(anchors, radii, nanchors, &est_lat, &est_lon);
+    double cx, cy, cz;
+    bs_latlon_to_ecef(est_lat, est_lon, &cx, &cy, &cz);
+    printf("  weighted centroid     = %.5f, %.5f, %.5f BM\n", cx, cy, cz);
+
+    /* Smallest ring radius = tightest upper bound on source-target distance */
+    double tightest_km = 1e9;
+    for (int i = 0; i < nanchors; ++i)
+        if (radii[i] < tightest_km) tightest_km = radii[i];
+    printf("  tightest ring radius  = %.0f km  (target within %.0f km of best anchor)\n",
+           tightest_km, tightest_km);
+
+    /* Consistency check */
+    if (tgt_geo.valid && nanchors > 0) {
+        double score = (double)n_inside / nanchors * 100.0;
+        printf("  geoIP consistency     = %d/%d anchors (%.0f%%)\n",
+               n_inside, nanchors, score);
+        if (n_inside == nanchors) {
+            char lbl[80] = "";
+            bs_geo_label(&tgt_geo, lbl, sizeof(lbl));
+            printf("  verdict               : consistent — geoIP %s is plausible\n",
+                   lbl[0] ? lbl : tgt_geo.tag);
+        } else {
+            printf("  verdict               : INCONSISTENT — geoIP placement conflicts\n"
+                   "                          with %d anchor(s) — possible anycast / VPN\n",
+                   nanchors - n_inside);
+        }
+    }
+
+    /* Distance from centroid estimate to geoIP */
+    if (tgt_geo.valid) {
+        double cdist = bs_haversine_km(est_lat, est_lon,
+                                       tgt_geo.lat, tgt_geo.lon);
+        printf("  centroid → geoIP      = %.0f km\n", cdist);
+    }
+
+    return 0;
+}

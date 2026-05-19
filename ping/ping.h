@@ -11,8 +11,10 @@
 #include <poll.h>
 #include <sys/param.h>
 #include <sys/socket.h>
-#include <linux/types.h>
-#include <linux/sockios.h>
+#if defined(__linux__)
+# include <linux/types.h>
+# include <linux/sockios.h>
+#endif
 #include <sys/file.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
@@ -23,20 +25,21 @@
 #include <string.h>
 #include <netdb.h>
 #include <setjmp.h>
-#include <asm/byteorder.h>
+#if defined(__linux__)
+# include <asm/byteorder.h>
+#endif
 #include <sched.h>
 #include <math.h>
 #include <netinet/ip.h>
 #include <netinet/ip6.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
-#include <linux/filter.h>
+#if defined(__linux__)
+# include <linux/filter.h>
+#endif
 #include <resolv.h>
 
-#ifdef HAVE_LIBCAP
-# include <sys/prctl.h>
-# include <sys/capability.h>
-#endif
+
 
 #include "iputils_common.h"
 #include "iputils_ni.h"
@@ -52,9 +55,11 @@
 #include <ifaddrs.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <linux/types.h>
-#include <linux/errqueue.h>
-#include <linux/in6.h>
+#if defined(__linux__)
+# include <linux/types.h>
+# include <linux/errqueue.h>
+# include <linux/in6.h>
+#endif
 
 #ifndef SCOPE_DELIMITER
 # define SCOPE_DELIMITER '%'
@@ -232,10 +237,25 @@ struct ping_rts {
 
 	/* Used only in ping_common.c */
 	int screen_width;
-#ifdef HAVE_LIBCAP
+#if defined(__linux__)
 	cap_value_t cap_raw;
 	cap_value_t cap_admin;
 #endif
+#if defined(__linux__)
+extern int modify_capability(cap_value_t, cap_flag_value_t);
+static inline int enable_capability_raw(void)   { return modify_capability(CAP_NET_RAW,   CAP_SET);   }
+static inline int disable_capability_raw(void)  { return modify_capability(CAP_NET_RAW,   CAP_CLEAR); }
+static inline int enable_capability_admin(void) { return modify_capability(CAP_NET_ADMIN, CAP_SET);   }
+static inline int disable_capability_admin(void){ return modify_capability(CAP_NET_ADMIN, CAP_CLEAR); }
+extern void drop_capabilities(void);
+#else
+static inline int enable_capability_raw(void)   { return 0; }
+static inline int disable_capability_raw(void)  { return 0; }
+static inline int enable_capability_admin(void) { return 0; }
+static inline int disable_capability_admin(void){ return 0; }
+static inline void drop_capabilities(void)      { }
+#endif
+
 
 	/* Used only in ping6_common.c */
 	int subnet_router_anycast; /* Subnet-Router anycast (RFC 4291) */
@@ -398,20 +418,12 @@ static int enable_capability_raw(void);
 static int disable_capability_raw(void);
 static int enable_capability_admin(void);
 static int disable_capability_admin(void);
-#ifdef HAVE_LIBCAP
-extern int modify_capability(cap_value_t, cap_flag_value_t);
-static inline int enable_capability_raw(void)		{ return modify_capability(CAP_NET_RAW,   CAP_SET);   }
-static inline int disable_capability_raw(void)		{ return modify_capability(CAP_NET_RAW,   CAP_CLEAR); }
-static inline int enable_capability_admin(void)		{ return modify_capability(CAP_NET_ADMIN, CAP_SET);   }
-static inline int disable_capability_admin(void)	{ return modify_capability(CAP_NET_ADMIN, CAP_CLEAR); }
-#else
-extern int modify_capability(int);
-static inline int enable_capability_raw(void)		{ return modify_capability(1); }
-static inline int disable_capability_raw(void)		{ return modify_capability(0); }
-static inline int enable_capability_admin(void)		{ return modify_capability(1); }
-static inline int disable_capability_admin(void)	{ return modify_capability(0); }
-#endif
-extern void drop_capabilities(void);
+
+static inline int enable_capability_raw(void)   { return 0; }
+static inline int disable_capability_raw(void)  { return 0; }
+static inline int enable_capability_admin(void) { return 0; }
+static inline int disable_capability_admin(void){ return 0; }
+static inline void drop_capabilities(void)      { }
 
 char *pr_addr(struct ping_rts *rts, void *sa, socklen_t salen);
 char *pr_raw_addr(struct ping_rts *rts, void *sa, socklen_t salen);

@@ -1,0 +1,8 @@
+baudit = executable('baudit', [
+    'baudit.c',
+    git_version_h
+],
+    include_directories : include_directories('..'),
+    dependencies : [m_dep],
+    link_with : [libcommon],
+    install: true)

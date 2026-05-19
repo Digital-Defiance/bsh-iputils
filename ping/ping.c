@@ -51,16 +51,23 @@
 
 #define _GNU_SOURCE
 
+
 #include "ping.h"
+#include "ipv6.h"
 
 #include <assert.h>
 #include <netinet/ip.h>
 #include <netinet/ip_icmp.h>
+
+#if defined(__linux__)
+#define HAVE_SOL_IP 1
+#endif
 #include <ifaddrs.h>
 #include <math.h>
 #include <locale.h>
 #include <sys/param.h>
 #include <stdbool.h>
+#include <net/if.h>
 
 /* FIXME: global_rts will be removed in future */
 struct ping_rts *global_rts;
@@ -751,17 +758,26 @@ main(int argc, char **argv)
 }
 
 static int iface_name2index(struct ping_rts *rts, int fd)
+#if defined(__linux__)
+static int iface_name2index(struct ping_rts *rts, int fd)
 {
 	struct ifreq ifr;
-
 	memset(&ifr, 0, sizeof(ifr));
 	strncpy(ifr.ifr_name, rts->device, IFNAMSIZ - 1);
-
 	if (ioctl(fd, SIOCGIFINDEX, &ifr) < 0)
 		error(2, 0, _("unknown iface: %s"), rts->device);
-
 	return ifr.ifr_ifindex;
 }
+#else
+static int iface_name2index(struct ping_rts *rts, int fd)
+{
+	(void)fd;
+	unsigned int idx = if_nametoindex(rts->device);
+	if (!idx)
+		error(2, 0, _("unknown iface: %s"), rts->device);
+	return (int)idx;
+}
+#endif
 
 static void bind_to_device(struct ping_rts *rts, int fd, in_addr_t addr)
 {
@@ -778,13 +794,15 @@ static void bind_to_device(struct ping_rts *rts, int fd, in_addr_t addr)
 		return;
 
 	if (IN_MULTICAST(ntohl(addr))) {
+#if defined(__linux__)
 		struct ip_mreqn imr;
-
 		memset(&imr, 0, sizeof(imr));
 		imr.imr_ifindex = iface_name2index(rts, fd);
-
 		if (setsockopt(fd, SOL_IP, IP_MULTICAST_IF, &imr, sizeof(imr)) == -1)
 			error(2, errno, "IP_MULTICAST_IF");
+#else
+		error(2, 0, "IP_MULTICAST_IF not supported on this platform");
+#endif
 	} else {
 		error(2, errno_save, "SO_BINDTODEVICE %s", rts->device);
 	}
@@ -957,8 +975,12 @@ int ping4_run(struct ping_rts *rts, int argc, char **argv, struct addrinfo *ai,
 	}
 
 	if (rts->pmtudisc >= 0) {
+#if defined(__linux__)
 		if (setsockopt(sock->fd, SOL_IP, IP_MTU_DISCOVER, &rts->pmtudisc, sizeof rts->pmtudisc) == -1)
 			error(2, errno, "IP_MTU_DISCOVER");
+#else
+		error(2, 0, "IP_MTU_DISCOVER not supported on this platform");
+#endif
 	}
 
 	int set_ident = rts->ident > 0 && sock->socktype == SOCK_DGRAM;
@@ -983,6 +1005,7 @@ int ping4_run(struct ping_rts *rts, int argc, char **argv, struct addrinfo *ai,
 	}
 
 	hold = 1;
+#if defined(__linux__)
 	if (setsockopt(sock->fd, SOL_IP, IP_RECVERR, &hold, sizeof hold))
 		error(0, 0, _("WARNING: your kernel is veeery old. No problems."));
 
@@ -992,6 +1015,7 @@ int ping4_run(struct ping_rts *rts, int argc, char **argv, struct addrinfo *ai,
 		if (setsockopt(sock->fd, SOL_IP, IP_RETOPTS, &hold, sizeof hold))
 			error(0, errno, _("WARNING: setsockopt(IP_RETOPTS)"));
 	}
+#endif
 
 	/* record route option */
 	if (rts->opt_rroute) {

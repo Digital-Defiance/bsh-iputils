@@ -97,19 +97,10 @@ config_h = configure_file(
 # Build b* utilities only
 subdir('bping')
 subdir('bclockdiff')
-subdir('btraceroute')
-subdir('bmtr')
-subdir('baudit')
 
 if gettext == true
 	subdir('po')
 endif
-
-# These are false since only b* utilities are built
-build_arping = false
-build_clockdiff = false
-build_ping = false
-build_tracepath = false
 
 if run_tests
 	subdir('test')

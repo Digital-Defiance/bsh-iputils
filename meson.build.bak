@@ -1,0 +1,264 @@
+cc = meson.get_compiler('c')
+
+project('iputils', 'c',
+       default_options : [
+	       'c_std=c99',
+	       'warning_level=3',
+	       'localstatedir=var',
+       ],
+       meson_version : '>=0.44', # >=0.58 is required for 'meson dist'
+       version : '20250605') # keep in sync with: git describe | awk -F- '{print $1}'
+
+prefix = get_option('prefix')
+bindir = join_paths(prefix, get_option('bindir'))
+localedir = join_paths(prefix, get_option('localedir'))
+sbindir = join_paths(prefix, get_option('sbindir'))
+
+
+
+# ...existing code...
+
+# bclockdiff build block (after project() and variable setup)
+# Will be placed after build_clockdiff variable is set
+
+
+
+
+gettext = get_option('USE_GETTEXT')
+
+
+# ...existing code continues...
+
+conf = configuration_data()
+prefix = get_option('prefix')
+bindir = join_paths(prefix, get_option('bindir'))
+localedir = join_paths(prefix, get_option('localedir'))
+sbindir = join_paths(prefix, get_option('sbindir'))
+if gettext == true
+	add_project_arguments(['-DGETTEXT_PACKAGE="iputils"'], language: 'c')
+	conf.set('ENABLE_NLS', 1, description : 'If set enable I18N.')
+	conf.set_quoted('LOCALEDIR', localedir)
+	intl_dep += cc.find_library('intl', required : false)
+endif
+
+idn = get_option('USE_IDN')
+if idn == true
+	idn_dep = dependency('libidn2', required : false)
+	if idn_dep.found()
+		add_project_arguments('-DUSE_IDN', language : 'c')
+		conf.set('USE_IDN', 1,
+			description : 'If set use Internationalized Domain Name library.')
+	endif
+else
+	idn_dep = dependency('disabler-appears-to-disable-executable-build', required : false)
+endif
+
+build_bping = true
+build_bclockdiff = true
+build_barping = false
+build_btracepath = false
+
+build_mans = get_option('BUILD_MANS')
+build_html_mans = get_option('BUILD_HTML_MANS')
+
+run_tests = not get_option('SKIP_TESTS')
+
+
+m_dep = dependency('', required : false)
+resolv_dep = dependency('', required : false)
+intl_dep = dependency('', required : false)
+m_dep = dependency('', required : false)
+# Only build Bright* utilities
+build_bping = true
+build_bclockdiff = true
+build_barping = false
+build_btracepath = false
+
+
+
+
+
+
+
+prefix = get_option('prefix')
+bindir = join_paths(prefix, get_option('bindir'))
+localedir = join_paths(prefix, get_option('localedir'))
+sbindir = join_paths(prefix, get_option('sbindir'))
+
+systemd = dependency('systemd', required : false)
+install_systemd_units = systemd.found() or get_option('INSTALL_SYSTEMD_UNITS')
+
+systemdunitdir = get_option('systemdunitdir')
+if systemdunitdir == '' and install_systemd_units
+	systemdunitdir = systemd.get_pkgconfig_variable('systemdsystemunitdir')
+endif
+
+setcap_arping = false
+setcap_clockdiff = false
+
+# Only build Bright* utilities
+if build_bping
+	# subdir('ping') # Disabled: only build b* utilities
+endif
+############################################################
+# Ensure shared variables are defined before subdir() calls
+git_version_h = vcs_tag(
+	input : 'git-version.h.meson',
+	output : 'git-version.h',
+	fallback : meson.project_version()
+)
+common_sources = files(
+	'iputils_common.h', 'iputils_common.c',
+	'md5.h', 'md5.c'
+)
+libcommon = static_library(
+	'common',
+	[common_sources, git_version_h],
+	install : false)
+
+idn = get_option('USE_IDN')
+
+# Meson configuration and arguments must be set before any targets
+gettext = get_option('USE_GETTEXT')
+if gettext == true
+	add_project_arguments(['-DGETTEXT_PACKAGE="iputils"'], language: 'c')
+	conf.set('ENABLE_NLS', 1, description : 'If set enable I18N.')
+	conf.set_quoted('LOCALEDIR', localedir)
+	intl_dep += cc.find_library('intl', required : false)
+endif
+
+idn = get_option('USE_IDN')
+if idn == true
+	idn_dep = dependency('libidn2', required : false)
+	if idn_dep.found()
+		add_project_arguments('-DUSE_IDN', language : 'c')
+		conf.set('USE_IDN', 1,
+			description : 'If set use Internationalized Domain Name library.')
+	endif
+else
+	idn_dep = dependency('disabler-appears-to-disable-executable-build', required : false)
+endif
+
+# Only build Bright* utilities
+subdir('bping')
+subdir('bclockdiff')
+if gettext == true
+	subdir('po')
+endif
+
+if host_machine.endian() == 'big'
+	conf.set('WORDS_BIGENDIAN', '1')
+endif
+
+foreach h : [
+	'error.h',
+]
+	if cc.has_header(h) and cc.has_function('error')
+		conf.set('HAVE_' + h.to_upper().underscorify(), 1,
+			description : 'Define if ' + h + ' can be included.')
+	endif
+endforeach
+
+git_version_h = vcs_tag(
+	input : 'git-version.h.meson',
+	output : 'git-version.h',
+	fallback : meson.project_version()
+)
+
+config_h = configure_file(
+	output : 'config.h',
+	configuration : conf)
+
+setcap = find_program('setcap', '/usr/sbin/setcap', '/sbin/setcap', required : false)
+if cap_dep.found() and setcap.found()
+	perm_type = 'caps'
+	setcap_path = setcap.path()
+else
+	perm_type = 'setuid'
+	setcap_path = '/dev/null'
+endif
+
+############################################################
+common_sources = files(
+	'iputils_common.h', 'iputils_common.c',
+	'md5.h', 'md5.c'
+)
+libcommon = static_library(
+	'common',
+	[common_sources, git_version_h],
+	install : false)
+
+if build_ping == true
+	# subdir ('ping') # Disabled: only build b* utilities
+endif
+
+if build_tracepath == true
+	tracepath = executable('tracepath', ['tracepath.c', git_version_h],
+		dependencies : [idn_dep, intl_dep],
+		link_with : [libcommon],
+		install: true)
+endif
+
+if build_clockdiff == true
+	clockdiff = executable('clockdiff', ['clockdiff.c', git_version_h],
+		dependencies : [cap_dep, intl_dep],
+		link_with : [libcommon],
+		install: true)
+	if (setcap_clockdiff)
+		meson.add_install_script('build-aux/setcap-setuid.sh',
+			bindir,
+			'clockdiff',
+			perm_type,
+			setcap_path
+		)
+	endif
+endif
+
+if build_arping == true
+	arping = executable('arping', ['arping.c', git_version_h],
+		dependencies : [rt_dep, cap_dep, idn_dep, intl_dep],
+		link_with : [libcommon],
+		install: true)
+	if (setcap_arping)
+		meson.add_install_script('build-aux/setcap-setuid.sh',
+			bindir,
+			'arping',
+			perm_type,
+			setcap_path
+		)
+	endif
+endif
+
+if build_mans == true or build_html_mans == true
+	subdir ('doc')
+
+	if meson.version().version_compare('>=0.48.0')
+		meson.add_dist_script('build-aux/meson-build-dist-man.sh')
+	endif
+endif
+
+if run_tests
+	subdir('test')
+endif
+
+output = '\n\nAPPLICATIONS (build)\n'
+output += 'man: ' + build_mans.to_string() + '\n'
+output += 'HTML man: ' + build_html_mans.to_string() + '\n'
+	output += 'bping: true\n'
+	output += 'bclockdiff: true\n'
+
+output += '\nCONFIGURATION\n'
+output += 'Capability (with libcap): ' + cap.to_string() + '\n'
+output += 'IDN (with libidn2): ' + idn.to_string() + '\n'
+output += 'I18N (with gettext): ' + gettext.to_string() + '\n'
+output += 'systemd: ' + install_systemd_units.to_string() + '\n'
+output += 'run tests: ' + run_tests.to_string() + '\n'
+
+output += '\nSYSTEM PATHS\n'
+output += 'prefix: ' + prefix + '\n'
+output += 'bindir: ' + bindir + '\n'
+output += 'localedir: ' + localedir + '\n'
+output += 'sbindir: ' + sbindir + '\n'
+output += 'systemdunitdir: ' + systemdunitdir + '\n'
+
+message(output)
