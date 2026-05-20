@@ -19,7 +19,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="bping — iputils re-dressed for BrightDate: -after/-before predicates, %Wt printf, and a -daystart that floors to the BrightDate boundary."
+      content="bright-iputils — iputils re-dressed for BrightDate: bping with light-floor, milliday RTT, and spacetime efficiency scoring."
     />
     <title>Bright iputils — Bright Spacetime Networking Tools</title>
     <style>
@@ -500,19 +500,34 @@
         <li><a href="#features">Features</a></li>
         <li><a href="#install">Install</a></li>
         <li><a href="https://bsh.brightchain.org">BSH</a></li>
-        <li><a href="https://github.com/Digital-Defiance/bright-iputils">GitHub</a></li>
+        <li>
+          <a href="https://github.com/Digital-Defiance/bright-iputils"
+            >GitHub</a
+          >
+        </li>
       </ul>
     </nav>
 
     <!-- ── HERO ── -->
     <header class="hero">
-      <div class="hero-eyebrow">🛰️ ping · clockdiff · tracepath · arping, reimagined</div>
+      <div class="hero-eyebrow">
+        🛰️ ping · clockdiff · tracepath · arping, reimagined &nbsp;·&nbsp; 🍺
+        macOS &amp; Linux
+      </div>
       <h1>BSH <span>iputils</span> — Bright Spacetime Networking Tools</h1>
       <p class="hero-sub">
-        Modernized Linux networking tools for the
-        <a class="link" href="https://brightdate.org"><strong>Bright Spacetime</strong></a>
-        era. <code>bping</code>, <code>bclockdiff</code>, <code>btracepath</code>, and <code>barping</code> — all output and accept BrightDate and are engineered for universal spacetime coordinates. <br />
-        <em>One sortable, timezone-free, and location-aware scalar — everywhere.</em>
+        Linux &amp; macOS networking tools for the
+        <a class="link" href="https://brightdate.org"
+          ><strong>Bright Spacetime</strong></a
+        >
+        era. <code>bping</code>, <code>bclockdiff</code>,
+        <code>btracepath</code>, and <code>barping</code> — all output and
+        accept BrightDate and are engineered for universal spacetime
+        coordinates. <br />
+        <em
+          >One sortable, timezone-free, and location-aware scalar —
+          everywhere.</em
+        >
       </p>
 
       <div class="terminal">
@@ -523,17 +538,16 @@
         </div>
         <!-- prettier-ignore -->
         <div class="terminal-body">
-          <div class="cmd-line"><span class="cmt"># files modified after BD 9600 (≈ Sep 2025) — no date parsing, no TZ</span></div>
-          <div class="cmd-line"><span class="prompt">$</span><span class="cmd">bfind . -after 9600 -name '*.log' -printf '%Wt %p\n'</span></div>
-          <div class="cmd-line"><span class="out">9628.195697 ./app.log</span></div>
-          <div class="cmd-line"><span class="out">9615.320041 ./audit.log</span></div>
-          <div class="cmd-line" style="margin-top: 0.6rem"><span class="cmt"># how old is the newest source file? — plain float subtraction</span></div>
-          <div class="cmd-line"><span class="prompt">$</span><span class="cmd">age=$(bfind . -name '*.c' -printf '%Wt\n' | sort -rn | head -1)</span></div>
-          <div class="cmd-line"><span class="prompt">$</span><span class="cmd">echo "newest: BD $age — $(echo "($age - 9628) * 86400 / 3600" | bc) h old"</span></div>
-          <div class="cmd-line"><span class="out">newest: BD 9628.197104 — 4.7 h old</span></div>
-          <div class="cmd-line" style="margin-top: 0.6rem"><span class="cmt"># database-backed search; DB timestamp shown as BD</span></div>
-          <div class="cmd-line"><span class="prompt">$</span><span class="cmd">blocate kernel | head -3</span></div>
-          <div class="cmd-line"><span class="out">Database: /var/db/locate.database (BD 9628.12) 6 423 144 entries</span></div>
+          <div class="cmd-line"><span class="prompt">➜</span><span class="cmd"> bping google.com</span></div>
+          <div class="cmd-line"><span class="out">bping google.com:</span></div>
+          <div class="cmd-line"><span class="out">  rtt min/avg/max/mdev  = 18.245/21.355/23.926/2.350 ms</span></div>
+          <div class="cmd-line"><span class="out">  rtt min/avg/max/mdev  = 0.00021117/0.00024716/0.00027692/0.00002720 md</span></div>
+          <div class="cmd-line"><span class="out">  light-floor (RTT/2)   = 10.678 mBM  (~3201 km)</span></div>
+          <div class="cmd-line"><span class="out">  src [~geoIP]   -0.00769, -0.01219, 0.01562 BM  (Auburn, United States)</span></div>
+          <div class="cmd-line"><span class="out">  tgt [~geoIP]   -0.00896, -0.01430, 0.01291 BM  (Mountain View, United States)</span></div>
+          <div class="cmd-line"><span class="out">  geo distance          = 3.666 mBM  (~1099 km)</span></div>
+          <div class="cmd-line"><span class="out">  light-spd limit       = 3.666 ms   (0.00004244 md)</span></div>
+          <div class="cmd-line"><span class="out">  efficiency            = 34.34%</span></div>
         </div>
       </div>
 
@@ -541,7 +555,7 @@
         <a class="btn btn-primary" href="#install">$ brew install →</a>
         <a
           class="btn btn-ghost"
-          href="https://github.com/Digital-Defiance/findutils-brightdate"
+          href="https://github.com/Digital-Defiance/bright-iputils"
           >View on GitHub</a
         >
         <a class="btn btn-ghost" href="https://bsh.brightchain.org"
@@ -554,35 +568,31 @@
     <section id="why">
       <div class="container">
         <div class="section-label">The Idea</div>
-        <h2>Why BrightDate? Why new findutils?</h2>
+        <h2>Why BrightDate? Why new iputils?</h2>
 
         <p>
-          <code>find</code>'s time predicates — <code>-mtime</code>,
-          <code>-newer</code>, <code>-newermt</code> — are a perennial source of
-          confusion: <code>-mtime -1</code> means "within the last 24 hours,
-          rounded down to integer days," <code>-newermt</code> needs an ISO 8601
-          string with the right timezone, and the results differ on Linux vs
-          macOS because <code>stat</code>'s timestamp resolution and epoch
-          handling differ subtly between the two. Every script that filters
-          files by recency carries this invisible complexity.
+          Standard <code>ping</code> gives you RTT in milliseconds — but
+          milliseconds alone say nothing about <em>where</em> the remote host
+          is. A 20 ms reply could be across a city or across a continent.
+          Without physical grounding, latency is just a number.
         </p>
         <p>
           <a class="link" href="https://bsh.brightchain.org"
             ><strong>BSH (BrightShell)</strong></a
           >
-          showed that the fix is not a better date-parsing library — it's a
-          better <em>time representation</em>. BrightDate is a single Float64:
-          decimal days since the astronomical epoch J2000.0, on a TAI substrate.
-          No timezone. No leap-second jumps. <code>b − a = elapsed days</code>,
-          always.
+          introduced BrightDate: a single Float64 — decimal days since the
+          astronomical epoch J2000.0, on a TAI substrate. No timezone. No
+          leap-second jumps. The same scalar for time <em>and</em> space.
         </p>
         <p>
-          This fork carries that same fix into the findutils layer. If your
-          shell prints BrightDate (BSH, or any shell using
-          <code>$BRIGHTEPOCH</code>), and your file-search tool speaks
-          BrightDate, there is no translation step anywhere in the pipeline. The
-          number in your prompt is the number you pass to <code>-after</code>,
-          which is the number printed by <code>-printf '%Wt'</code>.
+          This fork carries that fix into the networking layer.
+          <code>bping</code> takes RTT in milliseconds, converts to millidays,
+          derives the light-floor (the minimum distance the signal could have
+          traveled at <em>c</em>), and compares it against the actual
+          great-circle distance — giving you a real
+          <strong>efficiency score</strong> for every path. If your shell prints
+          BrightDate and your ping tool speaks BrightDate, there is no
+          translation step.
         </p>
 
         <p
@@ -604,45 +614,37 @@
 
         <div class="split">
           <div class="card">
-            <h3>🔎 Old <code>find</code> pain</h3>
+            <h3>� Old <code>ping</code> output</h3>
             <table class="bd-table">
               <thead>
                 <tr>
                   <th>Problem</th>
-                  <th>What goes wrong</th>
+                  <th>What's missing</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>-mtime -1</td>
-                  <td>
-                    Rounds to integer days from "now", not a clean boundary
-                  </td>
+                  <td>20 ms RTT</td>
+                  <td>No spatial grounding — could be 100 km or 10,000 km</td>
                 </tr>
                 <tr>
-                  <td>-newermt "2026-01-01"</td>
-                  <td>Needs TZ; differs on macOS vs Linux</td>
+                  <td>ms only</td>
+                  <td>Incompatible with BrightDate time arithmetic</td>
                 </tr>
                 <tr>
-                  <td>-printf "%T+"</td>
-                  <td>Locale-dependent, not sortable as-is</td>
+                  <td>No efficiency</td>
+                  <td>Can't tell if routing is tight or wildly inefficient</td>
                 </tr>
                 <tr>
-                  <td>Duration math</td>
-                  <td>
-                    Requires <code>date -d</code>, <code>gdate</code>, or Python
-                  </td>
-                </tr>
-                <tr>
-                  <td>Daystart</td>
-                  <td>Midnight in local timezone — silently wrong in UTC+N</td>
+                  <td>No location</td>
+                  <td>Latency anomalies are invisible without coordinates</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
           <div class="card">
-            <h3>✨ bfind fix</h3>
+            <h3>✨ bping fix</h3>
             <table class="bd-table">
               <thead>
                 <tr>
@@ -652,24 +654,28 @@
               </thead>
               <tbody>
                 <tr>
-                  <td>-after 9600</td>
-                  <td>Files whose mtime > BD 9600 — universal, exact</td>
+                  <td>light-floor</td>
+                  <td>
+                    RTT/2 in mBM — absolute minimum distance at <em>c</em>
+                  </td>
                 </tr>
                 <tr>
-                  <td>-before 9628</td>
-                  <td>Files whose mtime &lt; BD 9628 — same scalar</td>
+                  <td>geo distance</td>
+                  <td>Great-circle distance via geoIP or explicit coords</td>
                 </tr>
                 <tr>
-                  <td>%Wt / %Wa / %Wc / %WB</td>
-                  <td>Print mtime/atime/ctime/btime as BrightDate decimal</td>
+                  <td>efficiency&nbsp;%</td>
+                  <td>geo / light-floor × 100 — &gt;100% flags geoIP issues</td>
                 </tr>
                 <tr>
-                  <td>-daystart</td>
-                  <td>Floors to BD integer — same on every machine</td>
+                  <td>rtt (md)</td>
+                  <td>RTT in millidays — same unit as BrightDate timestamps</td>
                 </tr>
                 <tr>
-                  <td>-newerXY 9600</td>
-                  <td>All -newer variants accept BD literals</td>
+                  <td>ECEF coords</td>
+                  <td>
+                    Full 3-D position in BrightMeters for audit-grade queries
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -682,50 +688,78 @@
     <section id="features">
       <div class="container">
         <div class="section-label">What's new</div>
-        <h2>BrightDate across the whole pipeline.</h2>
+        <h2>BrightDate across the whole network stack.</h2>
         <p>
-          Every time-sensitive surface in findutils now speaks the same float.
-          The changes are surgical: all four binaries are renamed (<code
-            >b</code
-          >
-          prefix) so they coexist with system
-          <code>find</code>/<code>locate</code>/<code>xargs</code>.
-        <!-- ── WHY ── -->
-        <section id="why">
-          <div class="container">
-            <div class="section-label">The Idea</div>
-            <h2>Why Bright Spacetime? Forensic Utility</h2>
+          Every time- and distance-sensitive surface in iputils now speaks the
+          same float. The five binaries are renamed with a <code>b</code> prefix
+          so they coexist with system <code>ping</code>/<code>traceroute</code>
+          without shadowing them.
+        </p>
 
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">📡</div>
+            <h3><code>bping</code></h3>
             <p>
-              In a world of decentralized nodes and "trusted" identities, <strong>Ping vs. Distance</strong> is your ultimate truth-detector. If bsh knows its coordinates, it stops treating the internet like a magic cloud and starts treating it like a physical network of silicon and light.
+              ICMP probe with light-floor, ECEF/lat-lon coordinates, geo
+              distance, and a spacetime efficiency score. RTT shown in both ms
+              and millidays.
             </p>
-            <p>
-              <strong>The "Why" (Forensic Utility):</strong> Standard networking tells you <em>Latency</em>, but it doesn't tell you <em>Efficiency</em>.
-            </p>
-            <ul>
-              <li><strong>The Cheat Check:</strong> If a node in the BrightChain swarm claims to be "Local" (in D.C.) but returns a ping of 120ms, the math in bsh instantly flags it. Because <code>1 mbm = 1 ms</code>, a node 16 mbm away cannot physically respond faster than 16 ms. If it's slower than that, you're seeing routing overhead. If it's faster (which is impossible), you know the node is spoofing its location.</li>
-              <li><strong>The Routing Audit:</strong> You can finally see how much "Legacy Debt" your ISP is costing you. If you're pinging a server 1 mbm away and getting a 40 ms response, you know your data is taking a massive, inefficient detour through legacy copper.</li>
-            </ul>
-            <p><strong>The bsh Integration (The "How"):</strong> For bsh to handle this, it needs to be able to pipe coordinate data into its networking tools.</p>
-            <h3>The <code>bping</code> Command</h3>
-            <p>Instead of just showing time, <code>bping</code> provides the <strong>Spacetime Efficiency Ratio</strong>:</p>
-            <pre><code>bping node-01.brightchain.org
-            <div class="cmd-line"><span class="out">9628.194201 ./find/brightdate.c</span></div>
-            <div class="cmd-line" style="margin-top: 0.6rem"><span class="cmt"># find C files modified since BD 9625 and run clang-format on them</span></div>
-            <div class="cmd-line"><span class="prompt">$</span><span class="cmd">bfind src -after 9625 -name '*.c' -print0 | bxargs -0 clang-format -i</span></div>
-            <div class="cmd-line" style="margin-top: 0.6rem"><span class="cmt"># age of every log — float subtraction in awk, no date library</span></div>
-            <div class="cmd-line"><span class="prompt">$</span><span class="cmd">bfind /var/log -name '*.log' -printf '%Wt %p\n' \</span></div>
-            <p><strong>Math:</strong></p>
-            <ul>
-              <li><strong>1 mbm = 1 ms</strong> at light speed (in fiber/vacuum)</li>
-              <li>If latency &lt; physical minimum, the node is lying</li>
-              <li>If latency ≫ minimum, you see routing overhead</li>
-            </ul>
           </div>
-        </section>
-            <div class="cmd-line"><span class="prompt"> </span><span class="cmd">  | awk '{printf "%.4f days old %s\n", 9628.2 - $1, $2}'</span></div>
-            <div class="cmd-line"><span class="out">0.0042 days old /var/log/system.log</span></div>
-            <div class="cmd-line"><span class="out">3.1804 days old /var/log/install.log</span></div>
+          <div class="feature-card">
+            <div class="feature-icon">🕐</div>
+            <h3><code>bclockdiff</code></h3>
+            <p>
+              Measures clock offset between your host and a remote and reports
+              it in BrightDate units (microdays or nanodays) alongside the
+              standard output.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🗺️</div>
+            <h3><code>btraceroute</code></h3>
+            <p>
+              Per-hop geoIP lookup, RTT in ms and millidays, light-floor per
+              hop, and a summary comparing total path length to the direct
+              great-circle distance.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3><code>bmtr</code></h3>
+            <p>
+              Continuous rolling probe with a live in-place display. Shows
+              loss%, average RTT, stddev, and light-floor per hop. Use
+              <code>--report</code> for plain-text output.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔍</div>
+            <h3><code>baudit</code></h3>
+            <p>
+              Multi-anchor distance bounding. Given anchor points with known
+              locations and measured RTTs, computes ring constraints and a
+              weighted centroid estimate with a consistency verdict.
+            </p>
+          </div>
+        </div>
+
+        <div class="terminal" style="margin-top: 2.5rem; text-align: left">
+          <div class="terminal-bar">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+          </div>
+          <!-- prettier-ignore -->
+          <div class="terminal-body">
+            <div class="cmd-line"><span class="cmt"># per-hop trace with geoIP location and light-floor per hop</span></div>
+            <div class="cmd-line"><span class="prompt">$</span><span class="cmd"> btraceroute 8.8.8.8</span></div>
+            <div class="cmd-line" style="margin-top: 0.6rem"><span class="cmt"># continuous rolling probe — Ctrl+C to stop, or use --report</span></div>
+            <div class="cmd-line"><span class="prompt">$</span><span class="cmd"> bmtr --report -c 10 1.1.1.1</span></div>
+            <div class="cmd-line" style="margin-top: 0.6rem"><span class="cmt"># clock offset to a time server in BrightDate microdays</span></div>
+            <div class="cmd-line"><span class="prompt">$</span><span class="cmd"> bclockdiff -B time.cloudflare.com</span></div>
+            <div class="cmd-line" style="margin-top: 0.6rem"><span class="cmt"># multi-anchor distance bounding</span></div>
+            <div class="cmd-line"><span class="prompt">$</span><span class="cmd"> baudit --anchor=51.5074,-0.1278,42,London --anchor=35.6762,139.6503,130,Tokyo 8.8.8.8</span></div>
           </div>
         </div>
       </div>
@@ -750,13 +784,13 @@
             <div class="step-num">2</div>
             <div class="step-body">
               <h3>Install the tools</h3>
-              <pre><code>brew install digital-defiance/tap/findutils-brightdate</code></pre>
+              <pre><code>brew install digital-defiance/tap/bright-iputils</code></pre>
               <p style="margin-top: 0.5rem">
-                This installs <code>bfind</code>, <code>blocate</code>,
-                <code>bupdatedb</code>, and <code>bxargs</code> into
-                <code>$(brew --prefix)/bin</code>. They coexist with system
-                <code>find</code>/<code>locate</code>/<code>xargs</code> without
-                shadowing them.
+                This installs <code>bping</code>, <code>bclockdiff</code>,
+                <code>btraceroute</code>, <code>bmtr</code>, and
+                <code>baudit</code> into <code>$(brew --prefix)/bin</code>. They
+                coexist with system <code>ping</code>/<code>traceroute</code>
+                without shadowing them.
               </p>
             </div>
           </div>
@@ -765,7 +799,7 @@
             <div class="step-num">3</div>
             <div class="step-body">
               <h3>Try it</h3>
-              <pre><code>bfind ~ -maxdepth 2 -type f -printf '%Wt %p\n' | sort -rn | head -5</code></pre>
+              <pre><code>bping google.com</code></pre>
             </div>
           </div>
         </div>
@@ -781,8 +815,10 @@
               <h3>Prerequisites</h3>
               <p>
                 A C compiler (<code>clang</code> or <code>gcc</code>),
-                <code>autoconf</code>, <code>automake ≥ 1.16</code>, and
-                <code>gettext</code>. macOS, Linux, and *BSD all work.
+                <code>meson ≥ 0.57</code>, <code>ninja</code>, and
+                <code>libcap-dev</code> (Linux) or Xcode CLI tools (macOS).
+                Works on both platforms — install via Homebrew on macOS or build
+                with meson on Linux.
               </p>
             </div>
           </div>
@@ -790,29 +826,31 @@
             <div class="step-num">B</div>
             <div class="step-body">
               <h3>Clone &amp; build</h3>
-              <pre><code>git clone https://github.com/Digital-Defiance/findutils-brightdate.git
-cd findutils-brightdate
-autoreconf -fi
-./configure --prefix=/usr/local --disable-nls
-make -C gl && make -C lib
-make -C find bfind
-make -C locate blocate bupdatedb
-make -C xargs bxargs</code></pre>
+              <pre><code>git clone https://github.com/Digital-Defiance/bright-iputils.git
+cd bright-iputils
+meson setup builddir
+ninja -C builddir</code></pre>
             </div>
           </div>
           <div class="step">
             <div class="step-num">C</div>
             <div class="step-body">
               <h3>Install</h3>
-              <pre><code>sudo cp find/bfind locate/blocate locate/bupdatedb xargs/bxargs /usr/local/bin/</code></pre>
+              <pre><code>sudo ninja -C builddir install</code></pre>
             </div>
           </div>
         </div>
 
         <p style="margin-top: 2rem; font-size: 0.875rem">
-          <strong>Note:</strong> <code>BSH</code> is <em>not required</em> to use these tools — they work in any shell. But if you want BrightDate throughout your <em>whole shell</em>, install
-          <a class="link" href="https://bsh.brightchain.org"><strong>BSH (BrightShell)</strong></a>,
-          a zsh-compatible shell where <code>date</code>, <code>ls -l</code>, <code>stat</code>, <code>history -d</code>, and <code>$BRIGHTEPOCH</code> all speak the same float. <code>bfind</code> and <code>bping</code> fit right in.
+          <strong>Note:</strong> <code>BSH</code> is <em>not required</em> to
+          use these tools — they work in any shell. But if you want BrightDate
+          throughout your <em>whole shell</em>, install
+          <a class="link" href="https://bsh.brightchain.org"
+            ><strong>BSH (BrightShell)</strong></a
+          >, a zsh-compatible shell where <code>date</code>, <code>ls -l</code>,
+          <code>stat</code>, <code>history -d</code>, and
+          <code>$BRIGHTEPOCH</code> all speak the same float.
+          <code>bping</code> and the rest of bright-iputils fit right in.
         </p>
       </div>
     </section>
@@ -831,8 +869,9 @@ make -C xargs bxargs</code></pre>
               A zsh-compatible shell with BrightDate woven into every
               time-related surface: <code>date</code>, <code>ls -l</code>,
               <code>stat</code>, <code>history -d</code>, <code>sched</code>,
-              and <code>$BRIGHTEPOCH</code>. <br>
-              <strong>Not required</strong> for bping, bfind, or any BSH iputils — but makes them even more seamless.
+              and <code>$BRIGHTEPOCH</code>. <br />
+              <strong>Not required</strong> for bping, bclockdiff, btraceroute,
+              or any bright-iputils tools — but makes them even more seamless.
             </p>
             <p style="margin-top: 0.75rem">
               <a class="link" href="https://bsh.brightchain.org"
@@ -894,8 +933,8 @@ make -C xargs bxargs</code></pre>
             <h3>Homebrew tap</h3>
             <p>
               All Digital Defiance BrightDate tools in one tap. Install
-              <code>bfind</code>, the Rust CLI tools, and BSH itself from a
-              single tap.
+              <code>bright-iputils</code>, the Rust CLI tools, and BSH itself
+              from a single tap.
             </p>
             <pre
               style="margin-top: 0.75rem; font-size: 0.78rem"
@@ -911,9 +950,7 @@ brew install bdate btime buptime bcal bwatch bsh</code></pre>
     <footer>
       <p>
         bright-iputils — a fork of
-        <a href="https://github.com/iputils/iputils"
-          >iputils 20250605</a
-        >
+        <a href="https://github.com/iputils/iputils">iputils 20250605</a>
         by
         <a href="https://github.com/Digital-Defiance">Digital Defiance</a>.
         Released under the
@@ -923,9 +960,7 @@ brew install bdate btime buptime bcal bwatch bsh</code></pre>
         >.
       </p>
       <div class="footer-links">
-        <a href="https://github.com/Digital-Defiance/bright-iputils"
-          >Source</a
-        >
+        <a href="https://github.com/Digital-Defiance/bright-iputils">Source</a>
         <a
           href="https://github.com/Digital-Defiance/bright-iputils/blob/main/README.md"
           >README</a
