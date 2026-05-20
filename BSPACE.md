@@ -30,53 +30,57 @@ efficiency to every measurement.
 
 ## BSPACE Coordinate Protocol
 
-Coordinates can be supplied via environment variables so they never appear in
-shell history. All `b*` tools read the same variables.
-
-### Environment variables
-
-| Variable | Format | Description |
-|----------|--------|-------------|
-| `BSPACE_ECEF` | `x,y,z` | Your location as ECEF in BrightMeters. Audit-grade precision. |
-| `BSPACE_COORD` | `lat,lon` | Your location as decimal-degree lat/lon. No history exposure. Most human-friendly. |
-| `BSPACE_LAT` + `BSPACE_LON` | decimal degrees | Split lat/lon pair. Convenient when lat and lon come from separate sources. |
-| `LAT` + `LON` | decimal degrees | Generic split lat/lon. Lowest priority; useful as a system-wide fallback. |
-
-**Set in your shell profile** (e.g. `~/.zshrc` or `~/.bashrc`):
-
-```sh
-# Approximate location — safe to store in dotfiles (most common)
-export BSPACE_COORD=37.7749,-122.4194
-
-# Precise ECEF (from a GPS receiver or scientific survey)
-export BSPACE_ECEF=0.00421,-0.00615,0.00213
-
-# Split lat/lon alternative
-export BSPACE_LAT=37.7749
-export BSPACE_LON=-122.4194
-```
-
-### Coordinate source priority
-
-All `b*` tools evaluate sources in this order, highest first:
+All `b*` tools use the same coordinate priority chain:
 
 ```
---my-ecef  >  --my-coord  >  $BSPACE_ECEF  >  $BSPACE_COORD  >  $BSPACE_LAT+$BSPACE_LON  >  $LAT+$LON  >  auto-geoIP
+--my-ecef  >  --my-coord  >  BSH SDI geo socket ($BSH_GEO_SOCK)  >  auto-geoIP
 ```
 
 The first source that provides a valid position wins; lower tiers are ignored.
 The **target** is always auto-geolocated via `ip-api.com` unless an explicit
 `--target-ecef` or `--target-coord` flag is given.
 
+### BSH SDI v2 geo socket (RFC SDI v2 §8)
+
+When running inside BSH, the `BSH_GEO_SOCK` environment variable is set by the
+SDI agent. It points to a *path file* that contains the actual Unix-domain
+socket path. The agent holds the device's current location fix and serves it
+to authorised programs.
+
+| Env var | Role |
+|---------|------|
+| `BSH_GEO_SOCK` | Path file whose contents are the geo socket path. Set by BSH SDI agent; **does not contain location data**. |
+
+**Authorization:** each `b*` tool must be listed in `~/.config/bsh/geo-allow`
+(one binary path per line) before the agent will serve it a fix. The agent
+authenticates callers via `SO_PEERCRED`; no secret or token is required.
+
+**Escape hatch:** if the tool is not in the allowlist, wrap the invocation:
+
+```sh
+bsh-geo --exec -- bping 8.8.8.8
+```
+
+**Why not plain env vars?** Putting coordinates in env vars makes them visible
+to every child process and in `/proc/<pid>/environ`. The SDI geo socket is
+UID-gated and per-invocation; only authorised tools can read it.
+
+### Coordinate source priority
+
+All `b*` tools evaluate sources in this order, highest first:
+
+```
+--my-ecef  >  --my-coord  >  BSH SDI geo socket ($BSH_GEO_SOCK)  >  auto-geoIP
+```
+
 ### Source tags in output
 
 | Tag | Meaning |
 |-----|---------|
-| `[ecef]` | ECEF coordinates (CLI `--my-ecef` or `$BSPACE_ECEF`) |
-| `[coord]` | Explicit lat/lon (CLI `--my-coord`) |
-| `[env]` | Lat/lon from `$BSPACE_COORD` |
-| `[env:ll]` | Split lat/lon from `$BSPACE_LAT` + `$BSPACE_LON` |
-| `[ll]` | Split lat/lon from `$LAT` + `$LON` |
+| `[ecef]` | ECEF coordinates from CLI `--my-ecef` |
+| `[coord]` | Explicit lat/lon from CLI `--my-coord` |
+| `[sdi]` | Lat/lon from BSH SDI v2 geo socket |
+| `[sdi:ecef]` | Full ECEF from BSH SDI v2 geo socket (spacetime block present) |
 | `[~geoIP]` | Auto-geolocated via ip-api.com (approximate) |
 
 ---
@@ -102,12 +106,11 @@ bping [options] <destination>
 | `--hops` | Show per-hop traceroute with BrightDate units and geoIP location per hop |
 | `-h`, `--help` | Show help |
 
-### Environment variables
+### Location provider
 
-| Variable | Description |
-|----------|-------------|
-| `BSPACE_COORD=lat,lon` | Your lat/lon — read automatically, never in shell history |
-| `BSPACE_ECEF=x,y,z` | Your ECEF in BrightMeters — read automatically |
+| Env var | Description |
+|---------|-------------|
+| `BSH_GEO_SOCK` | Path file to the BSH SDI geo socket. Set automatically by BSH; tool must be in `~/.config/bsh/geo-allow`. |
 
 ### Output fields
 
@@ -116,7 +119,7 @@ bping 8.8.8.8:
   rtt min/avg/max/mdev  = 17.408/22.225/28.001/4.377 ms
   rtt min/avg/max/mdev  = 0.00020148/0.00025723/0.00032409/0.00005066 md
   light-floor (RTT/2)   = 11.113 mBM  (~3331 km)
-  src [env]               37.7749, -122.4194
+  src [sdi]               37.7749, -122.4194
   tgt [~geoIP]            39.0300, -77.5000  (Ashburn, United States)
   geo distance          = 12.931 mBM  (~3876 km)
   light-spd limit       = 12.931 ms   (0.00014966 md)
@@ -160,10 +163,6 @@ Each hop shows:
 
 ```sh
 # Basic — no coords, gets light-floor only + auto-geoIP for both ends
-bping 8.8.8.8
-
-# With location from env (set once in shell profile, never in history)
-export BSPACE_COORD=37.7749,-122.4194
 bping 8.8.8.8
 
 # Explicit coords on CLI (appears in history)
@@ -259,7 +258,7 @@ btraceroute [options] <destination>
 
 ```
 btraceroute to 8.8.8.8 (8.8.8.8), Ashburn, United States [~geoIP]
-src [env]     37.7749, -122.4194
+src [sdi]     37.7749, -122.4194
 
   hop   host                                      location                rtt (ms)      rtt (md)   floor(mBM/km)
   ----  ----------------------------------------  ----------------------  ---------  -----------  --------------
@@ -332,14 +331,13 @@ baudit [options] <destination>
 | `-c <count>` | Pings per measurement (default: 5) |
 | `-h`, `--help` | Show help |
 
-When `BSPACE_COORD` (or another position env var) is set, baudit automatically
-probes the destination and adds itself as an anchor.
+When the BSH SDI geo socket is available and the tool is in `~/.config/bsh/geo-allow`,
+baudit automatically probes the destination and adds itself as an anchor.
 
 ### Examples
 
 ```sh
-# Self-probe only (env var provides your position)
-export BSPACE_COORD=37.7749,-122.4194
+# Self-probe only (BSH SDI geo socket provides your position)
 baudit 8.8.8.8
 
 # Add explicit anchor vantage points
@@ -363,12 +361,6 @@ baudit --anchor=51.5074,-0.1278,42,London --anchor=35.6762,139.6503,130,Tokyo 8.
 ## Quick reference card
 
 ```sh
-# Set your location once — never in history again
-export BSPACE_COORD=LAT,LON          # e.g. 37.7749,-122.4194  (most common)
-export BSPACE_ECEF=X,Y,Z             # optional, audit-grade
-export BSPACE_LAT=LAT                # split alternative
-export BSPACE_LON=LON
-
 # bping
 bping HOST                            # light-floor + auto-geoIP
 bping --hops HOST                     # + per-hop trace with locations
@@ -382,7 +374,7 @@ bmtr HOST                             # live rolling display (Ctrl+C to stop)
 bmtr --report -c 10 HOST              # 10 cycles, then print plain report
 
 # baudit
-baudit HOST                           # self-probe (needs BSPACE_COORD set)
+baudit HOST                           # self-probe (BSH SDI geo socket)
 baudit --anchor=LAT,LON,RTT HOST      # add extra anchor vantage point
 
 # bclockdiff

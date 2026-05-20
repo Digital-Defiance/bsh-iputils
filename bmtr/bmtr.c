@@ -15,9 +15,9 @@
  *   --report         Print one final report instead of live display
  *   --my-coord=lat,lon / --my-ecef=x,y,z   (CLI, goes in history)
  *
- * Environment:
- *   BSPACE_COORD=lat,lon    My position (no history leak)
- *   BSPACE_ECEF=x,y,z       My ECEF in BrightMeters (no history leak)
+ * Location provider:
+ *   BSH_GEO_SOCK     BSH SDI v2 geo socket (RFC SDI v2 §8); tool must be
+ *                    listed in ~/.config/bsh/geo-allow.
  */
 
 #include "../brightspace.h"
@@ -251,9 +251,9 @@ static void usage(void)
         "\nCoordinate flags (go into shell history):\n"
         "  --my-ecef=x,y,z      My ECEF position (BrightMeters)\n"
         "  --my-coord=lat,lon    My position (decimal degrees)\n"
-        "\nEnvironment variables (no shell-history exposure):\n"
-        "  BSPACE_COORD=lat,lon  My position (decimal degrees)\n"
-        "  BSPACE_ECEF=x,y,z     My ECEF position (BrightMeters)\n");
+        "\nLocation provider (BSH SDI v2 geo socket):\n"
+        "  BSH_GEO_SOCK          Set by the BSH SDI agent; tool must be listed\n"
+        "                        in ~/.config/bsh/geo-allow to receive a fix.\n");
     exit(2);
 }
 
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
     if (!dest) usage();
     if (maxhops < 1 || maxhops > MAX_HOPS) maxhops = MAX_HOPS;
 
-    bs_load_env(&my_ecef, &have_my_ecef, &my_geo);
+    bs_sdi_get_geo(&my_ecef, &have_my_ecef, &my_geo);
     if (!have_my_ecef && !my_geo.valid)
         my_geo = bs_geolocate(NULL);
     if (have_my_ecef && !my_geo.valid)

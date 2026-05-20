@@ -7,11 +7,14 @@
  * BSPACE Coordinate Protocol:
  *   --my-ecef=x,y,z       ECEF in BrightMeters (CLI, audit-grade)  [ecef]
  *   --my-coord=lat,lon     Decimal degrees      (CLI, explicit)     [coord]
- *   $BSPACE_ECEF=x,y,z     ECEF via env        (no history leak)   [env:ecef]
- *   $BSPACE_COORD=lat,lon   Lat/lon pair via env (no history leak) [env]
- *   $BSPACE_LAT + $BSPACE_LON  Separate lat/lon  (no history leak) [env:ll]
- *   $LAT + $LON             Plain alternate lat/lon (no history)   [ll]
+ *   $BSH_GEO_SOCK          BSH SDI v2 geo socket (RFC SDI v2 §8)   [sdi] / [sdi:ecef]
  *   auto ip-api.com lookup of public IP        (fallback)           [~geoIP]
+ *
+ * Location is no longer read from plain environment variables.  The SDI v2
+ * geo socket (§8 of RFC SDI v2) is the secure replacement: the agent holds
+ * coordinates; child processes query it over a UID-gated Unix-domain socket.
+ * Each b* tool must be listed in ~/.config/bsh/geo-allow for the agent to
+ * serve it.  Use 'bsh-geo --exec -- <tool>' as an escape hatch when needed.
  *
  * Units:
  *   1 BrightMeter (BM)       = distance light travels in 1 s  = 299,792 km
@@ -31,6 +34,9 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/time.h>
+#include <unistd.h>
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
@@ -49,7 +55,7 @@ typedef struct {
     int    valid;
     char   city[64];
     char   country[64];
-    char   tag[16];     /* "[ecef]" "[coord]" "[env]" "[~geoIP]" */
+    char   tag[16];     /* "[ecef]" "[coord]" "[sdi]" "[sdi:ecef]" "[~geoIP]" */
 } bs_geo_t;
 
 /* ── Unit conversion ──────────────────────────────────────────────────── */
@@ -189,65 +195,139 @@ static inline bs_geo_t bs_geolocate(const char *ip)
     return g;
 }
 
-/* ── BSPACE env var loading ───────────────────────────────────────────── */
+/* ── SDI v2 geo-context client (RFC SDI v2 §8) ───────────────────────── */
 
 /*
- * Load my coordinates from env vars into *e / *g.
- * Call AFTER CLI flag parsing.  Only sets fields not already set.
- *
- * Priority (highest → lowest):
- *   1. $BSPACE_ECEF=x,y,z          BrightSpace ECEF in BrightMeters
- *   2. $BSPACE_COORD=lat,lon        BrightSpace lat/lon pair
- *   3. $BSPACE_LAT + $BSPACE_LON    BrightSpace separate lat/lon
- *   4. $LAT + $LON                  Traditional separate lat/lon
+ * Helper: read the geo socket path from the path-file written by the agent.
+ * $BSH_GEO_SOCK contains the path-file path (not the socket path directly).
+ * Returns 1 on success, 0 on failure.
  */
-static inline void bs_load_env(bs_ecef_t *e, int *have_ecef, bs_geo_t *g)
+static inline int bs_sdi_read_sock_path(const char *path_file,
+                                         char *sock_path, size_t sz)
 {
-    /* 1. BSPACE_ECEF */
-    if (!*have_ecef && !g->valid) {
-        const char *ev = getenv("BSPACE_ECEF");
-        if (ev && bs_parse_ecef(ev, e))
-            *have_ecef = 1;
+    FILE *fp = fopen(path_file, "r");
+    if (!fp) return 0;
+    char *ok = fgets(sock_path, (int)sz, fp);
+    fclose(fp);
+    if (!ok) return 0;
+    size_t n = strlen(sock_path);
+    while (n > 0 && (sock_path[n-1] == '\n' || sock_path[n-1] == '\r'))
+        sock_path[--n] = '\0';
+    return n > 0;
+}
+
+/*
+ * Query the BSH SDI v2 geo socket for the current location fix.
+ * Call AFTER CLI flag parsing; no-ops if coords are already set.
+ *
+ * Wire protocol (RFC SDI v2 §8.3):
+ *   1. Read $BSH_GEO_SOCK → path file → socket path
+ *   2. Connect (UID-authenticated by the agent; tool must be in geo-allow)
+ *   3. Send:    {"op":"get","require_altitude":false}\n
+ *   4. Receive: single JSON line — §6.2 success payload or §6.3 error
+ *   5. Close
+ *
+ * On success populates *g with tag [sdi].  If the response includes a
+ * spacetime block (BrightMeters), also populates *e with tag [sdi:ecef].
+ * Silently returns on any failure; caller falls through to auto-geoIP.
+ */
+static inline void bs_sdi_get_geo(bs_ecef_t *e, int *have_ecef, bs_geo_t *g)
+{
+    /* Skip if coords already provided via CLI flags */
+    if (*have_ecef || g->valid) return;
+
+    const char *path_file = getenv("BSH_GEO_SOCK");
+    if (!path_file || !*path_file) return;
+
+    char sock_path[512];
+    int  fd = -1;
+
+    /* Try up to 2 times; re-read path file on retry (agent may have restarted)
+     * per RFC SDI v2 §8.2. */
+    for (int attempt = 0; attempt < 2 && fd < 0; ++attempt) {
+        if (!bs_sdi_read_sock_path(path_file, sock_path, sizeof(sock_path)))
+            return;
+
+        struct sockaddr_un addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sun_family = AF_UNIX;
+        if (strlen(sock_path) >= sizeof(addr.sun_path)) return;
+        strncpy(addr.sun_path, sock_path, sizeof(addr.sun_path) - 1);
+
+        int s = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (s < 0) return;
+
+        /* 3-second send/receive timeout so the tool never hangs */
+        struct timeval tv;
+        tv.tv_sec = 3; tv.tv_usec = 0;
+        setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+        setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+
+        if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) == 0)
+            fd = s;
+        else
+            close(s);
     }
-    /* 2. BSPACE_COORD */
-    if (!*have_ecef && !g->valid) {
-        const char *ev = getenv("BSPACE_COORD");
-        if (ev) {
-            double lat, lon;
-            if (bs_parse_latlon(ev, &lat, &lon)) {
-                g->lat = lat; g->lon = lon; g->valid = 1;
-                snprintf(g->tag, sizeof(g->tag), "[env]");
-            }
-        }
+    if (fd < 0) return;
+
+    /* Send request */
+    static const char req[] = "{\"op\":\"get\",\"require_altitude\":false}\n";
+    if (write(fd, req, sizeof(req) - 1) != (ssize_t)(sizeof(req) - 1)) {
+        close(fd); return;
     }
-    /* 3. BSPACE_LAT + BSPACE_LON */
-    if (!*have_ecef && !g->valid) {
-        const char *elat = getenv("BSPACE_LAT");
-        const char *elon = getenv("BSPACE_LON");
-        if (elat && elon) {
-            char *end;
-            double lat = strtod(elat, &end);
-            if (end != elat) {
-                double lon = strtod(elon, &end);
-                if (end != elon) {
-                    g->lat = lat; g->lon = lon; g->valid = 1;
-                    snprintf(g->tag, sizeof(g->tag), "[env:ll]");
-                }
-            }
-        }
+
+    /* Read single JSON line response (up to 4 KiB) */
+    char resp[4096];
+    int pos = 0;
+    while (pos < (int)sizeof(resp) - 1) {
+        char c;
+        ssize_t n = read(fd, &c, 1);
+        if (n <= 0) break;
+        if (c == '\n') break;
+        resp[pos++] = c;
     }
-    /* 4. LAT + LON (traditional) */
-    if (!*have_ecef && !g->valid) {
-        const char *elat = getenv("LAT");
-        const char *elon = getenv("LON");
-        if (elat && elon) {
-            char *end;
-            double lat = strtod(elat, &end);
-            if (end != elat) {
-                double lon = strtod(elon, &end);
-                if (end != elon) {
-                    g->lat = lat; g->lon = lon; g->valid = 1;
-                    snprintf(g->tag, sizeof(g->tag), "[ll]");
+    resp[pos] = '\0';
+    close(fd);
+
+    if (!pos || strstr(resp, "\"error\"")) return;
+
+    /* Parse geodetic.latitude / geodetic.longitude (§6.2) */
+    const char *p;
+    double lat = 0.0, lon = 0.0;
+    int have_lat = 0, have_lon = 0;
+    if ((p = strstr(resp, "\"latitude\":")))
+        { p += 11; char *ep; lat = strtod(p, &ep); if (ep != p) have_lat = 1; }
+    if ((p = strstr(resp, "\"longitude\":")))
+        { p += 12; char *ep; lon = strtod(p, &ep); if (ep != p) have_lon = 1; }
+    if (!have_lat || !have_lon) return;
+
+    g->lat = lat; g->lon = lon; g->valid = 1;
+    snprintf(g->tag, sizeof(g->tag), "[sdi]");
+
+    /* Parse spacetime.{x,y,z} (BrightMeters) → bs_ecef_t if present.
+     * Extract the spacetime block first to avoid matching ecef.{x,y,z}. */
+    const char *st = strstr(resp, "\"spacetime\":");
+    if (st) {
+        const char *brace = strchr(st + 12, '{');
+        if (brace) {
+            const char *end = strchr(brace + 1, '}');
+            if (end) {
+                char block[256];
+                size_t blen = (size_t)(end - brace + 1);
+                if (blen < sizeof(block)) {
+                    memcpy(block, brace, blen);
+                    block[blen] = '\0';
+                    double sx = 0.0, sy = 0.0, sz = 0.0;
+                    int hx = 0, hy = 0, hz = 0;
+                    const char *q;
+                    if ((q = strstr(block, "\"x\":"))) { q += 4; char *ep; sx = strtod(q, &ep); if (ep != q) hx = 1; }
+                    if ((q = strstr(block, "\"y\":"))) { q += 4; char *ep; sy = strtod(q, &ep); if (ep != q) hy = 1; }
+                    if ((q = strstr(block, "\"z\":"))) { q += 4; char *ep; sz = strtod(q, &ep); if (ep != q) hz = 1; }
+                    if (hx && hy && hz) {
+                        e->x = sx; e->y = sy; e->z = sz;
+                        *have_ecef = 1;
+                        snprintf(g->tag, sizeof(g->tag), "[sdi:ecef]");
+                    }
                 }
             }
         }

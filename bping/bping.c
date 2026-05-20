@@ -4,8 +4,7 @@
  * Coordinate source priority (highest → lowest):
  *   --my-ecef=x,y,z      ECEF in BrightMeters (CLI, audit-grade)  [ecef]
  *   --my-coord=lat,lon    Decimal degrees      (CLI, explicit)     [coord]
- *   $BSPACE_ECEF=x,y,z    ECEF via env        (no history leak)   [env:ecef]
- *   $BSPACE_COORD=lat,lon  Lat/lon via env    (no history leak)    [env]
+ *   $BSH_GEO_SOCK         BSH SDI v2 geo socket (RFC SDI v2 §8)   [sdi] / [sdi:ecef]
  *   auto ip-api.com lookup of public IP       (fallback)           [~geoIP]
  */
 
@@ -134,14 +133,15 @@ static void usage(void)
         "  --my-coord=lat,lon        My position (decimal degrees)\n"
         "  --target-ecef=x,y,z      Target ECEF (BrightMeters, audit-grade)\n"
         "  --target-coord=lat,lon    Target position (decimal degrees)\n"
-        "\nEnvironment variables (no shell-history exposure):\n"
-        "  BSPACE_ECEF=x,y,z         My ECEF position (BrightMeters, audit-grade)\n"
-        "  BSPACE_COORD=lat,lon      My position (decimal degrees)\n"
+        "\nLocation provider (BSH SDI v2 geo socket):\n"
+        "  BSH_GEO_SOCK              Set by the BSH SDI agent; tool must be listed\n"
+        "                            in ~/.config/bsh/geo-allow to receive a fix.\n"
+        "  Use 'bsh-geo --exec -- bping ...' as an escape hatch when needed.\n"
         "\nOther flags:\n"
         "  --hops                    Per-hop trace with BrightDate units + geoIP\n"
         "  -h, --help                Show this help\n"
         "\nCoordinate source priority:\n"
-        "  --my-ecef > --my-coord > $BSPACE_ECEF > $BSPACE_COORD > auto-geoIP\n"
+        "  --my-ecef > --my-coord > BSH SDI geo socket > auto-geoIP\n"
         "  Target is always auto-geolocated unless an explicit flag is given.\n");
     exit(2);
 }
@@ -188,7 +188,7 @@ int main(int argc, char **argv)
     }
     if (!dest) usage();
 
-    bs_load_env(&my_ecef, &have_my_ecef, &my_geo);
+    bs_sdi_get_geo(&my_ecef, &have_my_ecef, &my_geo);
 
     char cmd[512];
     snprintf(cmd, sizeof(cmd), "ping -c 3 %s 2>&1", dest);

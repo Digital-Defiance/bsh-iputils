@@ -12,7 +12,7 @@ Standard networking tells you **Latency**, but it doesn't tell you **Efficiency*
 
 ### The bsh Integration (The "How")
 
-For bsh to handle this, it needs to be able to pipe coordinate data into its networking tools.
+For bsh to handle this, it needs to be able to pipe coordinate data into its networking tools. To do so, it uses [SDI](https://bsh.digitaldefiance.org/#sdi]).
 
 #### The bping Command
 
@@ -135,7 +135,7 @@ This project is a fork of [iputils](https://github.com/iputils/iputils), with Br
 If you are building on macOS, you must install required dependencies using Homebrew before building:
 
 ```
-brew install gettext meson ninja libidn2
+brew install gettext meson ninja libidn2 bsh
 brew link --force gettext
 ```
 

@@ -7,7 +7,7 @@
  *
  * Coordinate source priority (same as all b* tools):
  *   --my-ecef=x,y,z / --my-coord=lat,lon   (CLI)
- *   $BSPACE_ECEF / $BSPACE_COORD            (env, no history leak)
+ *   $BSH_GEO_SOCK                            (BSH SDI v2 geo socket, RFC SDI v2 §8)
  *   auto ip-api.com geoIP                   (fallback)
  */
 
@@ -31,9 +31,9 @@ static void usage(void)
         "\nCoordinate flags (go into shell history):\n"
         "  --my-ecef=x,y,z          My ECEF position (BrightMeters)\n"
         "  --my-coord=lat,lon        My position (decimal degrees)\n"
-        "\nEnvironment variables (no shell-history exposure):\n"
-        "  BSPACE_COORD=lat,lon      My position (decimal degrees)\n"
-        "  BSPACE_ECEF=x,y,z         My ECEF position (BrightMeters)\n"
+        "\nLocation provider (BSH SDI v2 geo socket):\n"
+        "  BSH_GEO_SOCK              Set by the BSH SDI agent; tool must be listed\n"
+        "                            in ~/.config/bsh/geo-allow to receive a fix.\n"
         "\nOptions:\n"
         "  -m <maxhops>              Maximum number of hops (default: 30)\n"
         "  -q <nqueries>             Queries per hop (default: 3)\n"
@@ -81,7 +81,7 @@ int main(int argc, char **argv)
     }
     if (!dest) usage();
 
-    bs_load_env(&my_ecef, &have_my_ecef, &my_geo);
+    bs_sdi_get_geo(&my_ecef, &have_my_ecef, &my_geo);
 
     /* Resolve and geolocate the destination */
     char dest_ip[64] = "";

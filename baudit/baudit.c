@@ -17,9 +17,9 @@
  *   - If all rings agree: "consistent — target likely near <city>"
  *   - If rings disagree: "inconsistent — possible anycast / VPN / bad geoIP"
  *
- * Environment:
- *   BSPACE_COORD=lat,lon    My position (no history leak)
- *   BSPACE_ECEF=x,y,z       My ECEF in BrightMeters (no history leak)
+ * Location provider:
+ *   BSH_GEO_SOCK     BSH SDI v2 geo socket (RFC SDI v2 §8); tool must be
+ *                    listed in ~/.config/bsh/geo-allow.
  */
 
 #include "../brightspace.h"
@@ -46,9 +46,9 @@ static void usage(void)
         "  --my-coord=lat,lon               My position (goes in shell history)\n"
         "  --my-ecef=x,y,z                  My ECEF position (BrightMeters)\n"
         "  -c <count>                       Ping count for self-probe (default: 5)\n"
-        "\nEnvironment variables (no shell-history exposure):\n"
-        "  BSPACE_COORD=lat,lon             My position\n"
-        "  BSPACE_ECEF=x,y,z                My ECEF position\n"
+        "\nLocation provider (BSH SDI v2 geo socket):\n"
+        "  BSH_GEO_SOCK                     Set by the BSH SDI agent; tool must be\n"
+        "                                   listed in ~/.config/bsh/geo-allow.\n"
         "\nExample:\n"
         "  # Probe from here + paste in two VPS measurements:\n"
         "  baudit --anchor=51.5074,-0.1278,42.3,London \\\n"
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
     }
     if (!dest) usage();
 
-    bs_load_env(&my_ecef, &have_my_ecef, &my_geo);
+    bs_sdi_get_geo(&my_ecef, &have_my_ecef, &my_geo);
     if (!have_my_ecef && !my_geo.valid)
         my_geo = bs_geolocate(NULL);
     if (have_my_ecef && !my_geo.valid)

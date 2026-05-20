@@ -1,3 +1,18 @@
+===== 20260520 =====
+Released May 20, 2026
+
+Replace insecure BSPACE_* environment variable coordinate injection with BSH
+SDI v2 geo socket protocol (RFC SDI v2 §8). Location is now obtained from the
+OS SDI Agent via a UID-gated Unix-domain socket; coordinates are never placed
+in environment variables.
+
+* brightspace (all b* tools)
+- security: replace BSPACE_ECEF/BSPACE_COORD/BSPACE_LAT/BSPACE_LON env var
+  reading with BSH SDI v2 geo socket (bs_sdi_get_geo)
+- new source tags: [sdi] (geodetic fix), [sdi:ecef] (spacetime block present)
+- coordinate priority: --my-ecef > --my-coord > BSH_GEO_SOCK > auto-geoIP
+- test: shared mock geo agent (test/mock_geo_agent.pl) for all b* test suites
+
 ===== 20250605 =====
 Released June 05, 2025
 
