@@ -18,7 +18,7 @@ Vcs-Git: https://github.com/iputils/iputils.git
 
 Package: bright-iputils
 Architecture: linux-any
-Depends: ${shlibs:Depends}, ${misc:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, bsh
 Description: BrightDate/BrightSpace networking tools (bping, bclockdiff, btraceroute, bmtr, baudit)
  Bright iputils is a BrightDate/BrightSpace-ready fork of iputils, providing
  modernized versions of classic Linux networking tools with a universal,

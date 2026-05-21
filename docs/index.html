@@ -960,15 +960,16 @@ sudo apt update</code></pre>
           </div>
 
           <p style="margin-top: 2rem; font-size: 0.875rem">
-            <strong>Note:</strong> <code>BSH</code> is <em>not required</em> to
-            use these tools — they work in any shell. But if you want BrightDate
-            throughout your <em>whole shell</em>, install
+            <strong>Note:</strong> <code>BSH</code> is
+            <strong>required</strong> — bright-iputils is designed as part of
+            the BrightShell ecosystem. Install
             <a class="link" href="https://bsh.brightchain.org"
               ><strong>BSH (BrightShell)</strong></a
             >, a zsh-compatible shell where <code>date</code>,
             <code>ls -l</code>, <code>stat</code>, <code>history -d</code>, and
             <code>$BRIGHTEPOCH</code> all speak the same float.
-            <code>bping</code> and the rest of bright-iputils fit right in.
+            <code>bping</code> and the rest of bright-iputils integrate
+            directly.
           </p>
         </div>
       </div>
@@ -989,8 +990,8 @@ sudo apt update</code></pre>
               time-related surface: <code>date</code>, <code>ls -l</code>,
               <code>stat</code>, <code>history -d</code>, <code>sched</code>,
               and <code>$BRIGHTEPOCH</code>. <br />
-              <strong>Not required</strong> for bping, bclockdiff, btraceroute,
-              or any bright-iputils tools — but makes them even more seamless.
+              <strong>Required</strong> by bright-iputils — bping, bclockdiff,
+              btraceroute, and the rest are designed as first-class BSH tools.
             </p>
             <p style="margin-top: 0.75rem">
               <a class="link" href="https://bsh.brightchain.org"
