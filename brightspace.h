@@ -27,6 +27,17 @@
 #ifndef BRIGHTSPACE_H
 #define BRIGHTSPACE_H
 
+/*
+ * Ensure POSIX/GNU networking and process prototypes are visible under -std=c99
+ * in distro builds (e.g., Launchpad/sbuild on Ubuntu).
+ */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

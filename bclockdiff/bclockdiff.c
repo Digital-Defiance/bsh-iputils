@@ -15,6 +15,7 @@
 #include <math.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
