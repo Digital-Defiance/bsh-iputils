@@ -32,12 +32,12 @@ bping node-01.brightchain.org
 - If latency < physical minimum, the node is lying
 - If latency ≫ minimum, you see routing overhead
 
-# Bright iputils — BrightDate Networking Tools
+# BSH iputils — BrightDate Networking Tools
 
 [![Build Status](https://github.com/iputils/iputils/actions/workflows/ci.yml/badge.svg)](https://github.com/iputils/iputils/actions/workflows/ci.yml)
 [![Coverity Status](https://scan.coverity.com/projects/1944/badge.svg?flat=1)](https://scan.coverity.com/projects/1944)
 
-**Bright iputils** is a Bright Spacetime/Space-ready fork of iputils, providing modernized versions of classic Linux networking tools with a universal, timezone-free time system. All tools output and accept **BrightDate** scalars for timestamps, and are designed for future **BrightSpace** (spatial) and **Bright Spacetime** (4D) extensions—making time, space, and latency math consistent across platforms, timezones, and even planetary boundaries.
+**BSH iputils** is a Bright Spacetime/Space-ready fork of iputils, providing modernized versions of classic Linux networking tools with a universal, timezone-free time system. All tools output and accept **BrightDate** scalars for timestamps, and are designed for future **BrightSpace** (spatial) and **Bright Spacetime** (4D) extensions—making time, space, and latency math consistent across platforms, timezones, and even planetary boundaries.
 
 All binaries are renamed with a `b` prefix to coexist with system tools:
 
@@ -113,7 +113,7 @@ See <https://www.kernel.org/doc/html/latest/process/coding-style.html>.
 
 Localization is hosted on [Fedora Weblate](https://translate.fedoraproject.org/projects/iputils/iputils/).
 
-## Tools included in Bright iputils
+## Tools included in BSH iputils
 
 - [`barping`](arping.c) — send ARP requests, BrightDate-aware
 - [`bclockdiff`](bclockdiff.c) — measure clock difference, BrightDate output

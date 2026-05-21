@@ -1,4 +1,4 @@
-bright-iputils (20260520-1) UNRELEASED; urgency=medium
+bsh-iputils (20260520-1) UNRELEASED; urgency=medium
 
   * Initial Debian/PPA packaging of the BrightDate iputils fork.
   * Builds b-prefixed networking tools: bping, bclockdiff, btraceroute,

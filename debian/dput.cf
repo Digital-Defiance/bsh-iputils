@@ -1,6 +1,6 @@
-[bright-iputils-ppa]
+[bsh-iputils-ppa]
 fqdn            = ppa.launchpad.net
 method          = ftp
-incoming        = ~YOUR_LAUNCHPAD_USERNAME/ubuntu/bright-iputils
-login           = YOUR_LAUNCHPAD_USERNAME
+incoming        = ~digital-defiance/ubuntu/bsh-iputils
+login           = digital-defiance
 allow_unsigned_uploads = 0

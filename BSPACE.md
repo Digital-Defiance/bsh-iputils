@@ -1,8 +1,8 @@
-# bright-iputils — BrightSpace Reference
+# BSH-iputils — BrightSpace Reference
 
-bright-iputils is a fork of iputils that adds **BrightSpace** spatial awareness
+BSH-iputils is a fork of iputils that adds **BrightSpace** spatial awareness
 to every network tool. Standard ping and traceroute report milliseconds with no
-spatial grounding. bright-iputils adds chord distance, light-floor, and
+spatial grounding. BSH-iputils adds chord distance, light-floor, and
 efficiency to every measurement.
 
 ---

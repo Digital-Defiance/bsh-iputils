@@ -13,7 +13,7 @@ set -euo pipefail
 SERIES="${1:-noble}"
 LAUNCHPAD_USER="${2:-}"
 
-PACKAGE="bright-iputils"
+PACKAGE="bsh-iputils"
 UPSTREAM_VERSION="20260520"
 DEBIAN_REVISION="1"
 PPA_VERSION="${UPSTREAM_VERSION}-${DEBIAN_REVISION}~${SERIES}1"
@@ -58,5 +58,5 @@ else
     echo "  dput ppa:<your-launchpad-username>/${PACKAGE} ${CHANGES_FILE}"
     echo ""
     echo "  Or with the dput.cf config:"
-    echo "  dput -c debian/dput.cf bright-iputils-ppa ${CHANGES_FILE}"
+    echo "  dput -c debian/dput.cf bsh-iputils-ppa ${CHANGES_FILE}"
 fi

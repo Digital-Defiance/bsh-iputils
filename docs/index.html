@@ -19,7 +19,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="bright-iputils — iputils re-dressed for BrightDate: bping with light-floor, milliday RTT, and spacetime efficiency scoring."
+      content="BSH-iputils — iputils re-dressed for BrightDate: bping with light-floor, milliday RTT, and spacetime efficiency scoring."
     />
     <title>BSH iputils — Bright Spacetime Networking Tools</title>
     <style>
@@ -519,14 +519,14 @@
   <body>
     <!-- ── NAV ── -->
     <nav>
-      <a class="nav-brand" href="#">bright-iputils</a>
+      <a class="nav-brand" href="#">BSH-iputils</a>
       <ul class="nav-links">
         <li><a href="#why">Why?</a></li>
         <li><a href="#features">Features</a></li>
         <li><a href="#install">Install</a></li>
         <li><a href="https://bsh.brightchain.org">BSH</a></li>
         <li>
-          <a href="https://github.com/Digital-Defiance/bright-iputils"
+          <a href="https://github.com/Digital-Defiance/bsh-iputils"
             >GitHub</a
           >
         </li>
@@ -618,7 +618,7 @@
         <a class="btn btn-primary" href="#install">Install (brew / apt) →</a>
         <a
           class="btn btn-ghost"
-          href="https://github.com/Digital-Defiance/bright-iputils"
+          href="https://github.com/Digital-Defiance/bsh-iputils"
           >View on GitHub</a
         >
         <a class="btn btn-ghost" href="https://bsh.brightchain.org"
@@ -854,7 +854,7 @@
               <div class="step-num">2</div>
               <div class="step-body">
                 <h3>Install the tools</h3>
-                <pre><code>brew install digital-defiance/tap/bright-iputils</code></pre>
+                <pre><code>brew install digital-defiance/tap/bsh-iputils</code></pre>
                 <p style="margin-top: 0.5rem">
                   This installs <code>bping</code>, <code>bclockdiff</code>,
                   <code>btraceroute</code>, <code>bmtr</code>, and
@@ -889,7 +889,7 @@
               <div class="step-num">1</div>
               <div class="step-body">
                 <h3>Add the PPA</h3>
-                <pre><code>sudo add-apt-repository ppa:digital-defiance/bright-iputils
+                <pre><code>sudo add-apt-repository ppa:digital-defiance/bsh-iputils
 sudo apt update</code></pre>
               </div>
             </div>
@@ -898,7 +898,7 @@ sudo apt update</code></pre>
               <div class="step-num">2</div>
               <div class="step-body">
                 <h3>Install the package</h3>
-                <pre><code>sudo apt install bright-iputils</code></pre>
+                <pre><code>sudo apt install bsh-iputils</code></pre>
                 <p style="margin-top: 0.5rem">
                   Installs <code>bping</code>, <code>bclockdiff</code>,
                   <code>btraceroute</code>, <code>bmtr</code>, and
@@ -944,8 +944,8 @@ sudo apt update</code></pre>
               <div class="step-num">B</div>
               <div class="step-body">
                 <h3>Clone &amp; build</h3>
-                <pre><code>git clone https://github.com/Digital-Defiance/bright-iputils.git
-  cd bright-iputils
+                <pre><code>git clone https://github.com/Digital-Defiance/bsh-iputils.git
+  cd bsh-iputils
   meson setup builddir
   ninja -C builddir</code></pre>
               </div>
@@ -961,14 +961,14 @@ sudo apt update</code></pre>
 
           <p style="margin-top: 2rem; font-size: 0.875rem">
             <strong>Note:</strong> <code>BSH</code> is
-            <strong>required</strong> — bright-iputils is designed as part of
+            <strong>required</strong> — bsh-iputils is designed as part of
             the BrightShell ecosystem. Install
             <a class="link" href="https://bsh.brightchain.org"
               ><strong>BSH (BrightShell)</strong></a
             >, a zsh-compatible shell where <code>date</code>,
             <code>ls -l</code>, <code>stat</code>, <code>history -d</code>, and
             <code>$BRIGHTEPOCH</code> all speak the same float.
-            <code>bping</code> and the rest of bright-iputils integrate
+            <code>bping</code> and the rest of bsh-iputils integrate
             directly.
           </p>
         </div>
@@ -990,7 +990,7 @@ sudo apt update</code></pre>
               time-related surface: <code>date</code>, <code>ls -l</code>,
               <code>stat</code>, <code>history -d</code>, <code>sched</code>,
               and <code>$BRIGHTEPOCH</code>. <br />
-              <strong>Required</strong> by bright-iputils — bping, bclockdiff,
+              <strong>Required</strong> by bsh-iputils — bping, bclockdiff,
               btraceroute, and the rest are designed as first-class BSH tools.
             </p>
             <p style="margin-top: 0.75rem">
@@ -1049,18 +1049,31 @@ sudo apt update</code></pre>
           </div>
 
           <div class="feature-card">
-            <div class="feature-icon">🍺</div>
+            <div class="feature-icon"><img src="Homebrew_logo.png" alt="Homebrew logo" /></div>
             <h3>Homebrew tap</h3>
             <p>
               All Digital Defiance BrightDate tools in one tap. Install
-              <code>bright-iputils</code>, the Rust CLI tools, and BSH itself
+              bsh-iputils</code>, the Rust CLI tools, and BSH itself
               from a single tap.
             </p>
             <pre
               style="margin-top: 0.75rem; font-size: 0.78rem"
             ><code>brew tap digital-defiance/tap
-brew install bright-iputils
+brew install bsh-iputils
 brew install bdate btime buptime bcal bwatch bsh</code></pre>
+          </div>
+          <div class="feature-card span-double">
+            <div class="feature-icon"><img src="UbuntuCoF.svg" alt="Ubuntu CoF logo" /></div>
+            <h3>Ubuntu PPA</h3>
+            <p>
+              Personal Package Archive for Ubuntu and Debian users. Provides
+              <code>bsh-iputils</code> with <code>libcap</code> support, plus the Rust CLI tools and BSH.
+            </p>
+            <pre
+              style="margin-top: 0.75rem; font-size: 0.78rem"
+            ><code>sudo add-apt-repository ppa:digital-defiance/bsh-iputils
+sudo apt update
+sudo apt install bsh-iputils bdate btime buptime bcal bwatch bsh</code></pre>
           </div>
         </div>
       </div>
@@ -1069,20 +1082,20 @@ brew install bdate btime buptime bcal bwatch bsh</code></pre>
     <!-- ── FOOTER ── -->
     <footer>
       <p>
-        bright-iputils — a fork of
+        bsh-iputils — a fork of
         <a href="https://github.com/iputils/iputils">iputils 20250605</a>
         by
         <a href="https://github.com/Digital-Defiance">Digital Defiance</a>.
         Released under the
         <a
-          href="https://github.com/Digital-Defiance/bright-iputils/blob/main/LICENSE"
+          href="https://github.com/Digital-Defiance/bsh-iputils/blob/main/LICENSE"
           >GPL-2.0-or-later</a
         >.
       </p>
       <div class="footer-links">
-        <a href="https://github.com/Digital-Defiance/bright-iputils">Source</a>
+        <a href="https://github.com/Digital-Defiance/bsh-iputils">Source</a>
         <a
-          href="https://github.com/Digital-Defiance/bright-iputils/blob/main/README.md"
+          href="https://github.com/Digital-Defiance/bsh-iputils/blob/main/README.md"
           >README</a
         >
         <a href="https://bsh.brightchain.org">BSH</a>
