@@ -1,0 +1,34 @@
+Source: bright-iputils
+Section: net
+Priority: optional
+Maintainer: BrightDate Project <packages@brightdate.org>
+Build-Depends:
+ debhelper-compat (= 13),
+ meson (>= 0.44),
+ ninja-build,
+ libcap-dev,
+ libgnutls28-dev,
+ libidn2-dev,
+ pkg-config
+Standards-Version: 4.6.2
+Homepage: https://github.com/iputils/iputils
+Rules-Requires-Root: no
+Vcs-Browser: https://github.com/iputils/iputils
+Vcs-Git: https://github.com/iputils/iputils.git
+
+Package: bright-iputils
+Architecture: linux-any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: BrightDate/BrightSpace networking tools (bping, bclockdiff, btraceroute, bmtr, baudit)
+ Bright iputils is a BrightDate/BrightSpace-ready fork of iputils, providing
+ modernized versions of classic Linux networking tools with a universal,
+ timezone-free time system. All tools output and accept BrightDate scalars
+ for timestamps and are designed for BrightSpace (spatial) and Bright
+ Spacetime (4D) extensions.
+ .
+ Included tools (b-prefixed to coexist with system iputils):
+  * bping    — BrightDate/BrightSpace ping
+  * bclockdiff — BrightDate/BrightSpace clock difference
+  * btraceroute — BrightDate/BrightSpace traceroute
+  * bmtr     — BrightDate/BrightSpace MTR-style tool
+  * baudit   — BrightDate network audit tool

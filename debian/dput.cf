@@ -1,0 +1,6 @@
+[bright-iputils-ppa]
+fqdn            = ppa.launchpad.net
+method          = ftp
+incoming        = ~YOUR_LAUNCHPAD_USERNAME/ubuntu/bright-iputils
+login           = YOUR_LAUNCHPAD_USERNAME
+allow_unsigned_uploads = 0

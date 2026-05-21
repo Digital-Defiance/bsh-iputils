@@ -1,0 +1,16 @@
+#!/usr/bin/make -f
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+export DH_VERBOSE = 1
+
+%:
+	dh $@ --buildsystem=meson
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		-DUSE_CAP=true \
+		-DUSE_IDN=true \
+		-DUSE_GETTEXT=false \
+		-DBUILD_MANS=false \
+		-DBUILD_HTML_MANS=false \
+		-DSKIP_TESTS=true

@@ -6,11 +6,32 @@ CC="${CC:-gcc}"
 BUILD_DIR="${BUILD_DIR:-builddir}"
 PREFIX="${PREFIX:-$HOME/iputils-install}"
 
-[ -z "${EXTRA_BUILD_OPTS:-}" ] && EXTRA_BUILD_OPTS="-DBUILD_HTML_MANS=true"
+[ -z "${EXTRA_BUILD_OPTS:-}" ] && EXTRA_BUILD_OPTS="-DBUILD_MANS=false -DBUILD_HTML_MANS=false -DSKIP_TESTS=true"
 BUILD_OPTS="-Dprefix=$PREFIX $EXTRA_BUILD_OPTS"
 [ -f "meson.cross" ] && BUILD_OPTS="--cross-file $PWD/meson.cross $BUILD_OPTS"
 
-BINARIES='arping clockdiff ping/ping tracepath'
+BINARIES='bping bclockdiff btraceroute bmtr baudit'
+
+# Platform detection: add Homebrew pkg-config paths on macOS and disable libcap
+if [ "$(uname -s)" = "Darwin" ]; then
+	if command -v brew > /dev/null 2>&1; then
+		HOMEBREW_PREFIX="$(brew --prefix)"
+	else
+		# Fall back to known Homebrew locations (Apple Silicon / Intel)
+		for dir in /opt/homebrew /usr/local; do
+			if [ -d "$dir/lib/pkgconfig" ]; then
+				HOMEBREW_PREFIX="$dir"
+				break
+			fi
+		done
+	fi
+	if [ -n "${HOMEBREW_PREFIX:-}" ]; then
+		export PKG_CONFIG_PATH="${HOMEBREW_PREFIX}/lib/pkgconfig:${PKG_CONFIG_PATH:-}"
+	fi
+	# libcap is Linux-only
+	EXTRA_BUILD_OPTS="${EXTRA_BUILD_OPTS} -DUSE_CAP=false"
+	BUILD_OPTS="-Dprefix=$PREFIX $EXTRA_BUILD_OPTS"
+fi
 
 # NOTE: meson iself checkes for minimal version
 # see meson_version in meson.build, it fails if not required
@@ -122,7 +143,11 @@ check_binaries()
 			continue
 		fi
 		[ -x "$BUILD_DIR/$i" ]
-		file "$BUILD_DIR/$i" | grep -E "$i.*${bits}-bit .*(executable|shared object).*$arch.*dynamically linked"
+		if [ "$(uname -s)" = "Darwin" ]; then
+			file "$BUILD_DIR/$i" | grep -E "Mach-O.*executable"
+		else
+			file "$BUILD_DIR/$i" | grep -E "$i.*${bits}-bit .*(executable|shared object).*$arch.*dynamically linked"
+		fi
 	done
 }
 

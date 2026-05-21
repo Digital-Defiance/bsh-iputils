@@ -23,6 +23,31 @@
     />
     <title>BSH iputils — Bright Spacetime Networking Tools</title>
     <style>
+      .container .feature-card {
+        margin-top: 1.5rem;
+      }
+      .feature-card.span-double {
+        grid-column: 1 / 3;
+      }
+      .feature-icon {
+        display: inline-flex;
+      }
+      .feature-heading {
+        display: inline-flex;
+      }
+      .feature-icon img {
+        height: 24px;
+        display: inline-block;
+      }
+      .feature-icon span.feature-emoji {
+        font-size: 1.5rem;
+        display: inline-flex;
+      }
+      .build-from-source .feature-heading h3 {
+        margin-top: 1.75rem;
+        margin-bottom: 0.5rem;
+        margin-left: 0.5rem;
+      }
       *,
       *::before,
       *::after {
@@ -590,7 +615,7 @@
       </div>
 
       <div class="hero-ctas">
-        <a class="btn btn-primary" href="#install">$ brew install →</a>
+        <a class="btn btn-primary" href="#install">Install (brew / apt) →</a>
         <a
           class="btn btn-ghost"
           href="https://github.com/Digital-Defiance/bright-iputils"
@@ -809,87 +834,143 @@
         <div class="section-label">Getting Started</div>
         <h2>Install in seconds.</h2>
 
-        <div class="steps">
-          <div class="step">
-            <div class="step-num">1</div>
-            <div class="step-body">
-              <h3>Add the tap (once)</h3>
-              <pre><code>brew tap digital-defiance/tap</code></pre>
-            </div>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <img src="Homebrew_logo.png" alt="Homebrew Logo" />
           </div>
-
-          <div class="step">
-            <div class="step-num">2</div>
-            <div class="step-body">
-              <h3>Install the tools</h3>
-              <pre><code>brew install digital-defiance/tap/bright-iputils</code></pre>
-              <p style="margin-top: 0.5rem">
-                This installs <code>bping</code>, <code>bclockdiff</code>,
-                <code>btraceroute</code>, <code>bmtr</code>, and
-                <code>baudit</code> into <code>$(brew --prefix)/bin</code>. They
-                coexist with system <code>ping</code>/<code>traceroute</code>
-                without shadowing them.
-              </p>
-            </div>
+          <div class="feature-heading">
+            <h3>macOS (Homebrew)</h3>
           </div>
+          <div class="steps">
+            <div class="step">
+              <div class="step-num">1</div>
+              <div class="step-body">
+                <h3>Add the tap (once)</h3>
+                <pre><code>brew tap digital-defiance/tap</code></pre>
+              </div>
+            </div>
 
-          <div class="step">
-            <div class="step-num">3</div>
-            <div class="step-body">
-              <h3>Try it</h3>
-              <pre><code>bping google.com</code></pre>
+            <div class="step">
+              <div class="step-num">2</div>
+              <div class="step-body">
+                <h3>Install the tools</h3>
+                <pre><code>brew install digital-defiance/tap/bright-iputils</code></pre>
+                <p style="margin-top: 0.5rem">
+                  This installs <code>bping</code>, <code>bclockdiff</code>,
+                  <code>btraceroute</code>, <code>bmtr</code>, and
+                  <code>baudit</code> into <code>$(brew --prefix)/bin</code>.
+                  They coexist with system <code>ping</code>/<code
+                    >traceroute</code
+                  >
+                  without shadowing them.
+                </p>
+              </div>
+            </div>
+
+            <div class="step">
+              <div class="step-num">3</div>
+              <div class="step-body">
+                <h3>Try it</h3>
+                <pre><code>bping google.com</code></pre>
+              </div>
             </div>
           </div>
         </div>
 
-        <p style="margin-top: 2rem; font-size: 0.9rem">
-          <strong style="color: var(--text-bright)">Build from source</strong>
-        </p>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <img src="UbuntuCoF.svg" alt="Ubuntu Logo" />
+          </div>
+          <div class="feature-heading">
+            <h3>Ubuntu / Debian (PPA)</h3>
+          </div>
+          <div class="steps">
+            <div class="step">
+              <div class="step-num">1</div>
+              <div class="step-body">
+                <h3>Add the PPA</h3>
+                <pre><code>sudo add-apt-repository ppa:digital-defiance/bright-iputils
+sudo apt update</code></pre>
+              </div>
+            </div>
 
-        <div class="steps" style="margin-top: 1rem">
-          <div class="step">
-            <div class="step-num">A</div>
-            <div class="step-body">
-              <h3>Prerequisites</h3>
-              <p>
-                A C compiler (<code>clang</code> or <code>gcc</code>),
-                <code>meson ≥ 0.57</code>, <code>ninja</code>, and
-                <code>libcap-dev</code> (Linux) or Xcode CLI tools (macOS).
-                Works on both platforms — install via Homebrew on macOS or build
-                with meson on Linux.
-              </p>
+            <div class="step">
+              <div class="step-num">2</div>
+              <div class="step-body">
+                <h3>Install the package</h3>
+                <pre><code>sudo apt install bright-iputils</code></pre>
+                <p style="margin-top: 0.5rem">
+                  Installs <code>bping</code>, <code>bclockdiff</code>,
+                  <code>btraceroute</code>, <code>bmtr</code>, and
+                  <code>baudit</code> to <code>/usr/bin</code>. Built with
+                  <code>libcap</code> and <code>libidn2</code> support.
+                </p>
+              </div>
             </div>
-          </div>
-          <div class="step">
-            <div class="step-num">B</div>
-            <div class="step-body">
-              <h3>Clone &amp; build</h3>
-              <pre><code>git clone https://github.com/Digital-Defiance/bright-iputils.git
-cd bright-iputils
-meson setup builddir
-ninja -C builddir</code></pre>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num">C</div>
-            <div class="step-body">
-              <h3>Install</h3>
-              <pre><code>sudo ninja -C builddir install</code></pre>
+
+            <div class="step">
+              <div class="step-num">3</div>
+              <div class="step-body">
+                <h3>Try it</h3>
+                <pre><code>bping google.com</code></pre>
+              </div>
             </div>
           </div>
         </div>
 
-        <p style="margin-top: 2rem; font-size: 0.875rem">
-          <strong>Note:</strong> <code>BSH</code> is <em>not required</em> to
-          use these tools — they work in any shell. But if you want BrightDate
-          throughout your <em>whole shell</em>, install
-          <a class="link" href="https://bsh.brightchain.org"
-            ><strong>BSH (BrightShell)</strong></a
-          >, a zsh-compatible shell where <code>date</code>, <code>ls -l</code>,
-          <code>stat</code>, <code>history -d</code>, and
-          <code>$BRIGHTEPOCH</code> all speak the same float.
-          <code>bping</code> and the rest of bright-iputils fit right in.
-        </p>
+        <div class="feature-card">
+          <div class="feature-icon">
+            <span class="feature-emoji">🛠️</span>
+          </div>
+          <div class="feature-heading">
+            <h3>Build from source</h3>
+          </div>
+
+          <div class="steps" style="margin-top: 1rem">
+            <div class="step">
+              <div class="step-num">A</div>
+              <div class="step-body">
+                <h3>Prerequisites</h3>
+                <p>
+                  A C compiler (<code>clang</code> or <code>gcc</code>),
+                  <code>meson ≥ 0.57</code>, <code>ninja</code>, and
+                  <code>libcap-dev</code> (Linux) or Xcode CLI tools (macOS).
+                  Works on both platforms — install via Homebrew on macOS or
+                  build with meson on Linux.
+                </p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num">B</div>
+              <div class="step-body">
+                <h3>Clone &amp; build</h3>
+                <pre><code>git clone https://github.com/Digital-Defiance/bright-iputils.git
+  cd bright-iputils
+  meson setup builddir
+  ninja -C builddir</code></pre>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-num">C</div>
+              <div class="step-body">
+                <h3>Install</h3>
+                <pre><code>sudo ninja -C builddir install</code></pre>
+              </div>
+            </div>
+          </div>
+
+          <p style="margin-top: 2rem; font-size: 0.875rem">
+            <strong>Note:</strong> <code>BSH</code> is <em>not required</em> to
+            use these tools — they work in any shell. But if you want BrightDate
+            throughout your <em>whole shell</em>, install
+            <a class="link" href="https://bsh.brightchain.org"
+              ><strong>BSH (BrightShell)</strong></a
+            >, a zsh-compatible shell where <code>date</code>,
+            <code>ls -l</code>, <code>stat</code>, <code>history -d</code>, and
+            <code>$BRIGHTEPOCH</code> all speak the same float.
+            <code>bping</code> and the rest of bright-iputils fit right in.
+          </p>
+        </div>
       </div>
     </section>
 

@@ -56,6 +56,13 @@ endif
 m_dep = cc.find_library('m', required : false)
 resolv_dep = cc.find_library('resolv', required : false)
 
+# USE_CAP is Linux-only; silently force it off on macOS regardless of what was passed
+use_cap = get_option('USE_CAP')
+if use_cap and host_machine.system() == 'darwin'
+	use_cap = false
+	message('Disabling USE_CAP: libcap is not available on macOS')
+endif
+
 build_mans = get_option('BUILD_MANS')
 build_html_mans = get_option('BUILD_HTML_MANS')
 run_tests = not get_option('SKIP_TESTS')
