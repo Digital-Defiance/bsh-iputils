@@ -1,8 +1,8 @@
-# BSH-iputils — BrightSpace Reference
+# BSH iputils — BrightSpace Reference
 
-BSH-iputils is a fork of iputils that adds **BrightSpace** spatial awareness
+BSH iputils is a fork of iputils that adds **BrightSpace** spatial awareness
 to every network tool. Standard ping and traceroute report milliseconds with no
-spatial grounding. BSH-iputils adds chord distance, light-floor, and
+spatial grounding. BSH iputils adds chord distance, light-floor, and
 efficiency to every measurement.
 
 ---
@@ -33,55 +33,65 @@ efficiency to every measurement.
 All `b*` tools use the same coordinate priority chain:
 
 ```
---my-ecef  >  --my-coord  >  BSH SDI geo socket ($BSH_GEO_SOCK)  >  auto-geoIP
+--my-ecef  >  --my-coord  >  BrightNexus bridge  >  auto-geoIP
 ```
 
 The first source that provides a valid position wins; lower tiers are ignored.
 The **target** is always auto-geolocated via `ip-api.com` unless an explicit
 `--target-ecef` or `--target-coord` flag is given.
 
-### BSH SDI v2 geo socket (RFC SDI v2 §8)
+### BrightNexus and the BrightLink Protocol
 
-When running inside BSH, the `BSH_GEO_SOCK` environment variable is set by the
-SDI agent. It points to a *path file* that contains the actual Unix-domain
-socket path. The agent holds the device's current location fix and serves it
-to authorised programs.
+When the [BrightNexus][brightnexus] desktop bridge is running, each `b*` tool
+talks to it directly over a Unix-domain socket using the [BrightLink
+Protocol][brightlink]. BrightNexus holds the device's current location fix —
+sourced from CoreLocation on macOS, GeoClue on Linux — and serves it to
+authorised tools.
 
-| Env var | Role |
-|---------|------|
-| `BSH_GEO_SOCK` | Path file whose contents are the geo socket path. Set by BSH SDI agent; **does not contain location data**. |
+[brightnexus]: https://brightnexus.digitaldefiance.org/
+[brightlink]: https://github.com/Digital-Defiance/BrightChain/blob/main/docs/papers/brightlink.md
 
-**Authorization:** each `b*` tool must be listed in `~/.config/bsh/geo-allow`
-(one binary path per line) before the agent will serve it a fix. The agent
-authenticates callers via `SO_PEERCRED`; no secret or token is required.
+| Path | Role |
+|------|------|
+| `~/.brightchain/brightnexus/brightnexus.sock` | Per-user EBP/1+BrightLink socket. Mode 0600. |
+| `$BRIGHTNEXUS_SOCKET` | Optional override of the default socket path. |
+| `~/.brightchain/iputils-pins/<binary>.sep-pub` | Per-tool TOFU pin of BrightNexus' P-256 SEP/TPM identity. |
 
-**Escape hatch:** if the tool is not in the allowlist, wrap the invocation:
+**Wire flow.** On first geo lookup, the tool performs a `LINK_REGISTER`
+handshake (DD-ECIES envelope over secp256k1 to the bridge's identity key,
+bilateral HKDF-SHA256 to derive `K_session`, P-256 transcript signature
+verified against the SEP/TPM-anchored bridge identity, TOFU-pinned to disk).
+Subsequent calls within the same process re-use the registered session for
+`LINK_GEO_GET`. Geo queries are not AEAD-wrapped — the socket's mode-0600
+permission already confines the data to the local user.
 
-```sh
-bsh-geo --exec -- bping 8.8.8.8
-```
+**ACL grain.** Each `b*` binary registers as itself, with its own
+kernel-canonical executable identity reported to the bridge at `accept(2)`.
+That means the user grants `geo:precise` to `bping`, `btraceroute`, `bmtr`,
+and `baudit` independently — one prompt per binary, not a blanket grant.
+Decisions persist in BrightNexus' menu-bar UI (Always / Once / Deny / Deny
+Always); the friction lives where it should, at the bridge, not in the tool.
 
-**Why not plain env vars?** Putting coordinates in env vars makes them visible
-to every child process and in `/proc/<pid>/environ`. The SDI geo socket is
-UID-gated and per-invocation; only authorised tools can read it.
+**TOFU pin rotation.** The bridge's SEP/TPM identity is pinned to disk on
+first registration. If the bridge identity changes (BrightNexus reset,
+restored backup, machine swap), each tool refuses to register and prints a
+diagnostic naming the pin file. Remove the file by hand to accept the new
+identity — the same friction the bridge applies to its own identity reset.
 
-### Coordinate source priority
-
-All `b*` tools evaluate sources in this order, highest first:
-
-```
---my-ecef  >  --my-coord  >  BSH SDI geo socket ($BSH_GEO_SOCK)  >  auto-geoIP
-```
-
-### Source tags in output
+**Source tags in output:**
 
 | Tag | Meaning |
 |-----|---------|
 | `[ecef]` | ECEF coordinates from CLI `--my-ecef` |
 | `[coord]` | Explicit lat/lon from CLI `--my-coord` |
-| `[sdi]` | Lat/lon from BSH SDI v2 geo socket |
-| `[sdi:ecef]` | Full ECEF from BSH SDI v2 geo socket (spacetime block present) |
+| `[brightlink]` | Lat/lon from BrightNexus (no BrightSpace block) |
+| `[brightlink:ecef]` | Full BrightSpace ECEF from BrightNexus |
 | `[~geoIP]` | Auto-geolocated via ip-api.com (approximate) |
+
+**Diagnostics.** Set `BRIGHTLINK_DEBUG=1` in the environment to see one-line
+stderr diagnostics when the bridge is unreachable, the user denies the scope,
+or registration fails. By default the tool falls through silently to geoIP so
+it never blocks on policy decisions during routine network diagnostics.
 
 ---
 
@@ -108,22 +118,22 @@ bping [options] <destination>
 
 ### Location provider
 
-| Env var | Description |
-|---------|-------------|
-| `BSH_GEO_SOCK` | Path file to the BSH SDI geo socket. Set automatically by BSH; tool must be in `~/.config/bsh/geo-allow`. |
+When BrightNexus is running and the user has granted `geo:precise` for `bping`,
+the tool reads coordinates directly from the bridge with no flags required.
+See "BSPACE Coordinate Protocol" above for the registration / TOFU pin model.
 
 ### Output fields
 
 ```
-bping 8.8.8.8:
-  rtt min/avg/max/mdev  = 17.408/22.225/28.001/4.377 ms
-  rtt min/avg/max/mdev  = 0.00020148/0.00025723/0.00032409/0.00005066 md
-  light-floor (RTT/2)   = 11.113 mBM  (~3331 km)
-  src [sdi]               37.7749, -122.4194
-  tgt [~geoIP]            39.0300, -77.5000  (Ashburn, United States)
-  geo distance          = 12.931 mBM  (~3876 km)
-  light-spd limit       = 12.931 ms   (0.00014966 md)
-  efficiency            = 116.36%  [warn: exceeds c — geoIP may be off]
+bping 1.1.1.1:
+  rtt min/avg/max/mdev  = 22.576/24.449/26.121/1.454 ms
+  rtt min/avg/max/mdev  = 0.00026130/0.00028297/0.00030233/0.00001683 md
+  light-floor (RTT/2)   = 12.225 mBM  (~3665 km)
+  src [brightlink:ecef]   -0.00769, -0.01221, 0.01560 BM
+  tgt [~geoIP]            -0.01680, 0.00855, -0.00981 BM  (South Brisbane, Australia)
+  geo distance          = 39.499 mBM  (~11841 km)
+  light-spd limit       = 39.499 ms   (0.00045716 md)
+  efficiency            = 323.11%  [warn: exceeds c — geoIP may be off]
 ```
 
 | Field | Description |
@@ -162,7 +172,7 @@ Each hop shows:
 ### Examples
 
 ```sh
-# Basic — no coords, gets light-floor only + auto-geoIP for both ends
+# Basic — pulls your coords from BrightNexus, target geoIP, full geo math
 bping 8.8.8.8
 
 # Explicit coords on CLI (appears in history)
@@ -257,8 +267,8 @@ btraceroute [options] <destination>
 ### Output
 
 ```
-btraceroute to 8.8.8.8 (8.8.8.8), Ashburn, United States [~geoIP]
-src [sdi]     37.7749, -122.4194
+btraceroute to 1.1.1.1, South Brisbane, Australia [~geoIP]
+src [brightlink:ecef]  -0.00769, -0.01221, 0.01560 BM
 
   hop   host                                      location                rtt (ms)      rtt (md)   floor(mBM/km)
   ----  ----------------------------------------  ----------------------  ---------  -----------  --------------
@@ -331,13 +341,13 @@ baudit [options] <destination>
 | `-c <count>` | Pings per measurement (default: 5) |
 | `-h`, `--help` | Show help |
 
-When the BSH SDI geo socket is available and the tool is in `~/.config/bsh/geo-allow`,
-baudit automatically probes the destination and adds itself as an anchor.
+When BrightNexus is reachable and `baudit` is granted `geo:precise`, baudit
+automatically probes the destination and adds itself as an anchor.
 
 ### Examples
 
 ```sh
-# Self-probe only (BSH SDI geo socket provides your position)
+# Self-probe only (your position comes from BrightNexus)
 baudit 8.8.8.8
 
 # Add explicit anchor vantage points
@@ -362,7 +372,7 @@ baudit --anchor=51.5074,-0.1278,42,London --anchor=35.6762,139.6503,130,Tokyo 8.
 
 ```sh
 # bping
-bping HOST                            # light-floor + auto-geoIP
+bping HOST                            # light-floor + auto-geoIP (or BrightNexus)
 bping --hops HOST                     # + per-hop trace with locations
 
 # btraceroute
@@ -374,7 +384,7 @@ bmtr HOST                             # live rolling display (Ctrl+C to stop)
 bmtr --report -c 10 HOST              # 10 cycles, then print plain report
 
 # baudit
-baudit HOST                           # self-probe (BSH SDI geo socket)
+baudit HOST                           # self-probe (BrightNexus provides position)
 baudit --anchor=LAT,LON,RTT HOST      # add extra anchor vantage point
 
 # bclockdiff

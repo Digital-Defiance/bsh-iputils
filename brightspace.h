@@ -5,16 +5,24 @@
  * so each translation unit gets its own copy with no linker conflicts.
  *
  * BSPACE Coordinate Protocol:
- *   --my-ecef=x,y,z       ECEF in BrightMeters (CLI, audit-grade)  [ecef]
- *   --my-coord=lat,lon     Decimal degrees      (CLI, explicit)     [coord]
- *   $BSH_GEO_SOCK          BSH SDI v2 geo socket (RFC SDI v2 §8)   [sdi] / [sdi:ecef]
- *   auto ip-api.com lookup of public IP        (fallback)           [~geoIP]
+ *   --my-ecef=x,y,z       ECEF in BrightMeters (CLI, audit-grade)   [ecef]
+ *   --my-coord=lat,lon     Decimal degrees      (CLI, explicit)      [coord]
+ *   BrightNexus bridge     BrightLink LINK_GEO_GET (§9.4 of the      [brightlink] /
+ *                          BrightLink RFC) via the local 'bsh-geo'   [brightlink:ecef]
+ *                          helper, which holds the registered session
+ *   auto ip-api.com lookup of public IP        (fallback)            [~geoIP]
  *
- * Location is no longer read from plain environment variables.  The SDI v2
- * geo socket (§8 of RFC SDI v2) is the secure replacement: the agent holds
- * coordinates; child processes query it over a UID-gated Unix-domain socket.
- * Each b* tool must be listed in ~/.config/bsh/geo-allow for the agent to
- * serve it.  Use 'bsh-geo --exec -- <tool>' as an escape hatch when needed.
+ * Location is read from BrightNexus, the per-user resident bridge that
+ * BrightLink (§3 of the BrightLink RFC) anchors to a hardware signing
+ * facility (Apple Secure Enclave, TPM2, or PKCS#11).  Tools shell out to
+ * 'bsh-geo --get --format both --json', which performs the registered
+ * LINK_REGISTER handshake (DD-ECIES + P-256 transcript signature) and the
+ * LINK_GEO_GET request on our behalf.  The bridge gates each query with
+ * the user's geo ACL (§7 of the RFC) — the user grants 'geo:precise' once,
+ * and subsequent invocations either succeed silently or fail fast.
+ *
+ * The previous SDI v2 geo socket (BSH_GEO_SOCK environment variable, OSC 7777
+ * terminal-escape credential delivery) is deprecated and has been removed.
  *
  * Units:
  *   1 BrightMeter (BM)       = distance light travels in 1 s  = 299,792 km
@@ -66,7 +74,8 @@ typedef struct {
     int    valid;
     char   city[64];
     char   country[64];
-    char   tag[16];     /* "[ecef]" "[coord]" "[sdi]" "[sdi:ecef]" "[~geoIP]" */
+    char   tag[24];     /* "[ecef]" "[coord]" "[brightlink]"
+                         * "[brightlink:ecef]" "[~geoIP]" */
 } bs_geo_t;
 
 /* ── Unit conversion ──────────────────────────────────────────────────── */
@@ -206,144 +215,14 @@ static inline bs_geo_t bs_geolocate(const char *ip)
     return g;
 }
 
-/* ── SDI v2 geo-context client (RFC SDI v2 §8) ───────────────────────── */
+/* ── BrightLink geo client (BrightLink RFC §9.4) ─────────────────────── */
 
 /*
- * Helper: read the geo socket path from the path-file written by the agent.
- * $BSH_GEO_SOCK contains the path-file path (not the socket path directly).
- * Returns 1 on success, 0 on failure.
+ * Geo retrieval lives in the dedicated brightlink.c translation unit
+ * (linked via libbrightlink). Tools include "brightlink.h" and call
+ * bl_get_geo() — this header just exposes the bs_geo_t / bs_ecef_t types
+ * the geo client populates.
  */
-static inline int bs_sdi_read_sock_path(const char *path_file,
-                                         char *sock_path, size_t sz)
-{
-    FILE *fp = fopen(path_file, "r");
-    if (!fp) return 0;
-    char *ok = fgets(sock_path, (int)sz, fp);
-    fclose(fp);
-    if (!ok) return 0;
-    size_t n = strlen(sock_path);
-    while (n > 0 && (sock_path[n-1] == '\n' || sock_path[n-1] == '\r'))
-        sock_path[--n] = '\0';
-    return n > 0;
-}
-
-/*
- * Query the BSH SDI v2 geo socket for the current location fix.
- * Call AFTER CLI flag parsing; no-ops if coords are already set.
- *
- * Wire protocol (RFC SDI v2 §8.3):
- *   1. Read $BSH_GEO_SOCK → path file → socket path
- *   2. Connect (UID-authenticated by the agent; tool must be in geo-allow)
- *   3. Send:    {"op":"get","require_altitude":false}\n
- *   4. Receive: single JSON line — §6.2 success payload or §6.3 error
- *   5. Close
- *
- * On success populates *g with tag [sdi].  If the response includes a
- * spacetime block (BrightMeters), also populates *e with tag [sdi:ecef].
- * Silently returns on any failure; caller falls through to auto-geoIP.
- */
-static inline void bs_sdi_get_geo(bs_ecef_t *e, int *have_ecef, bs_geo_t *g)
-{
-    /* Skip if coords already provided via CLI flags */
-    if (*have_ecef || g->valid) return;
-
-    const char *path_file = getenv("BSH_GEO_SOCK");
-    if (!path_file || !*path_file) return;
-
-    char sock_path[512];
-    int  fd = -1;
-
-    /* Try up to 2 times; re-read path file on retry (agent may have restarted)
-     * per RFC SDI v2 §8.2. */
-    for (int attempt = 0; attempt < 2 && fd < 0; ++attempt) {
-        if (!bs_sdi_read_sock_path(path_file, sock_path, sizeof(sock_path)))
-            return;
-
-        struct sockaddr_un addr;
-        memset(&addr, 0, sizeof(addr));
-        addr.sun_family = AF_UNIX;
-        if (strlen(sock_path) >= sizeof(addr.sun_path)) return;
-        strncpy(addr.sun_path, sock_path, sizeof(addr.sun_path) - 1);
-
-        int s = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (s < 0) return;
-
-        /* 3-second send/receive timeout so the tool never hangs */
-        struct timeval tv;
-        tv.tv_sec = 3; tv.tv_usec = 0;
-        setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-        setsockopt(s, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
-
-        if (connect(s, (struct sockaddr *)&addr, sizeof(addr)) == 0)
-            fd = s;
-        else
-            close(s);
-    }
-    if (fd < 0) return;
-
-    /* Send request */
-    static const char req[] = "{\"op\":\"get\",\"require_altitude\":false}\n";
-    if (write(fd, req, sizeof(req) - 1) != (ssize_t)(sizeof(req) - 1)) {
-        close(fd); return;
-    }
-
-    /* Read single JSON line response (up to 4 KiB) */
-    char resp[4096];
-    int pos = 0;
-    while (pos < (int)sizeof(resp) - 1) {
-        char c;
-        ssize_t n = read(fd, &c, 1);
-        if (n <= 0) break;
-        if (c == '\n') break;
-        resp[pos++] = c;
-    }
-    resp[pos] = '\0';
-    close(fd);
-
-    if (!pos || strstr(resp, "\"error\"")) return;
-
-    /* Parse geodetic.latitude / geodetic.longitude (§6.2) */
-    const char *p;
-    double lat = 0.0, lon = 0.0;
-    int have_lat = 0, have_lon = 0;
-    if ((p = strstr(resp, "\"latitude\":")))
-        { p += 11; char *ep; lat = strtod(p, &ep); if (ep != p) have_lat = 1; }
-    if ((p = strstr(resp, "\"longitude\":")))
-        { p += 12; char *ep; lon = strtod(p, &ep); if (ep != p) have_lon = 1; }
-    if (!have_lat || !have_lon) return;
-
-    g->lat = lat; g->lon = lon; g->valid = 1;
-    snprintf(g->tag, sizeof(g->tag), "[sdi]");
-
-    /* Parse spacetime.{x,y,z} (BrightMeters) → bs_ecef_t if present.
-     * Extract the spacetime block first to avoid matching ecef.{x,y,z}. */
-    const char *st = strstr(resp, "\"spacetime\":");
-    if (st) {
-        const char *brace = strchr(st + 12, '{');
-        if (brace) {
-            const char *end = strchr(brace + 1, '}');
-            if (end) {
-                char block[256];
-                size_t blen = (size_t)(end - brace + 1);
-                if (blen < sizeof(block)) {
-                    memcpy(block, brace, blen);
-                    block[blen] = '\0';
-                    double sx = 0.0, sy = 0.0, sz = 0.0;
-                    int hx = 0, hy = 0, hz = 0;
-                    const char *q;
-                    if ((q = strstr(block, "\"x\":"))) { q += 4; char *ep; sx = strtod(q, &ep); if (ep != q) hx = 1; }
-                    if ((q = strstr(block, "\"y\":"))) { q += 4; char *ep; sy = strtod(q, &ep); if (ep != q) hy = 1; }
-                    if ((q = strstr(block, "\"z\":"))) { q += 4; char *ep; sz = strtod(q, &ep); if (ep != q) hz = 1; }
-                    if (hx && hy && hz) {
-                        e->x = sx; e->y = sy; e->z = sz;
-                        *have_ecef = 1;
-                        snprintf(g->tag, sizeof(g->tag), "[sdi:ecef]");
-                    }
-                }
-            }
-        }
-    }
-}
 
 /* ── Traceroute line parsing helpers ──────────────────────────────────── */
 

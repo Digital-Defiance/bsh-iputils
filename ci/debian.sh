@@ -33,6 +33,8 @@ apt install -y --no-install-recommends \
 	jq \
 	libcap-dev \
 	libidn2-0-dev \
+	libsecp256k1-dev \
+	libssl-dev \
 	meson \
 	pkg-config \
 	xsltproc \

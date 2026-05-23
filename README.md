@@ -12,7 +12,7 @@ Standard networking tells you **Latency**, but it doesn't tell you **Efficiency*
 
 ### The bsh Integration (The "How")
 
-For bsh to handle this, it needs to be able to pipe coordinate data into its networking tools. To do so, it uses [SDI](https://bsh.digitaldefiance.org/#sdi]).
+For bsh to handle this, it needs to be able to pipe coordinate data into its networking tools. Each `b*` tool speaks the [BrightLink Protocol](https://github.com/Digital-Defiance/BrightChain/blob/main/docs/papers/brightlink.md) directly to [BrightNexus](https://brightnexus.digitaldefiance.org/), the per-user resident bridge. BrightNexus anchors trust in a hardware-rooted signing facility (Apple's Secure Enclave on macOS, TPM2 / PKCS#11 on Linux), holds the device's location, and gates each tool's access through a per-binary `geo:precise` ACL grant. See [BSPACE.md](BSPACE.md) for the wire-level details.
 
 #### The bping Command
 
@@ -75,6 +75,20 @@ $ ./configure && meson build
 
 Configuration can be adjusted (prefix, what is being built, etc.), see `meson_options.txt` and `meson.build`.
 Build dependencies are listed in scripts in the `ci/` directory.
+
+### Cloning
+
+bsh-iputils carries [libBrightLink](https://github.com/Digital-Defiance/libbrightlink) at `subprojects/libbrightlink/` as a git submodule. After cloning, initialise it:
+
+```
+git clone https://github.com/Digital-Defiance/bsh-iputils.git
+cd bsh-iputils
+git submodule update --init --recursive
+```
+
+Or in one shot with `git clone --recurse-submodules https://github.com/Digital-Defiance/bsh-iputils.git`.
+
+The build will fail at `meson setup` if the submodule directory is empty.
 
 ## Supported libc
 

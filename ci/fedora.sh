@@ -15,7 +15,9 @@ $yum \
 	iproute \
 	jq \
 	libcap-devel \
+	libsecp256k1-devel \
 	libxslt \
+	openssl-devel \
 	pkg-config
 
 if [ "$(basename $0)" = "centos.sh" ] || [ "$(basename $0)" = "rockylinux.sh" ]; then

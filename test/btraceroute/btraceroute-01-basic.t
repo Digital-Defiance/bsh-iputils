@@ -1,16 +1,15 @@
 #!/usr/bin/perl -w
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Tests for btraceroute: basic smoke + BSH SDI v2 geo socket
+# Tests for btraceroute: basic smoke + BrightLink success/failure paths.
 
 use Test::Command;
 use Test::More;
 use File::Basename;
 use Cwd;
 
-my $lib  = File::Basename::dirname(Cwd::abs_path($0)) . '/../lib.pl';
-my $mock = File::Basename::dirname(Cwd::abs_path($0)) . '/../mock_geo_agent.pl';
-require "$lib";
-require "$mock";
+my $here = File::Basename::dirname(Cwd::abs_path($0));
+require "$here/../lib.pl";
+require "$here/../mock_brightlink.pl";
 
 my $tool = get_cmd($ARGV[0] // 'btraceroute');
 
@@ -32,29 +31,31 @@ my $tool = get_cmd($ARGV[0] // 'btraceroute');
     };
 }
 
-# ── Basic run to localhost ────────────────────────────────────
+# ── Bridge unreachable: graceful downgrade ────────────────────
 {
+    local $ENV{BRIGHTNEXUS_SOCKET} = '/nonexistent/brightnexus.sock';
     my $cmd = Test::Command->new(cmd => "$tool -m 1 -q 1 127.0.0.1");
     $cmd->exit_is_num(0);
-    subtest 'basic output' => sub {
+    subtest 'bridge unreachable falls through' => sub {
         $cmd->stdout_like(qr/btraceroute to/);
+        $cmd->stdout_unlike(qr/\[brightlink/);
     };
 }
 
-# ── SDI v2 geo socket: [sdi] / [sdi:ecef] tag ────────────────
-# Start a mock geo agent (see test/mock_geo_agent.pl), point BSH_GEO_SOCK at
-# the path-file it creates, and verify the [sdi] or [sdi:ecef] tag appears.
-{
-    my ($path_file, $pid) = start_mock_geo_agent();
+# ── Mock bridge: [brightlink:ecef] tag flows through ──────────
+SKIP: {
+    my ($sock, $pid) = start_mock_brightnexus(tool_path => $tool);
+    skip "mock-brightnexus not available", 1 unless defined $sock;
 
-    {
-        local $ENV{BSH_GEO_SOCK} = $path_file;
-        my $cmd = Test::Command->new(cmd => "$tool -m 1 -q 1 127.0.0.1");
-        $cmd->exit_is_num(0);
-        $cmd->stdout_like(qr/\[sdi(?::ecef)?\]/, 'BSH_GEO_SOCK sets [sdi] or [sdi:ecef] tag');
-    }
+    my $home = mock_home();
+    local $ENV{BRIGHTNEXUS_SOCKET} = $sock;
+    local $ENV{HOME} = $home;
 
-    stop_mock_geo_agent($pid);
+    my $cmd = Test::Command->new(cmd => "$tool -m 1 -q 1 127.0.0.1");
+    $cmd->exit_is_num(0);
+    $cmd->stdout_like(qr/\[brightlink(?::ecef)?\]/, 'mock bridge yields [brightlink] tag');
+
+    stop_mock_brightnexus($pid);
 }
 
 done_testing;

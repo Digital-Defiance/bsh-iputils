@@ -18,11 +18,13 @@
  *   - If rings disagree: "inconsistent — possible anycast / VPN / bad geoIP"
  *
  * Location provider:
- *   BSH_GEO_SOCK     BSH SDI v2 geo socket (RFC SDI v2 §8); tool must be
- *                    listed in ~/.config/bsh/geo-allow.
+ *   BrightNexus bridge — BrightLink LINK_GEO_GET (RFC §9.4) via the
+ *   'bsh-geo --get --format both --json' helper.  The bridge gates the
+ *   request through the user's geo:precise ACL grant.
  */
 
 #include "../brightspace.h"
+#include "../brightlink_glue.h"
 
 #define MAX_ANCHORS 32
 
@@ -46,9 +48,10 @@ static void usage(void)
         "  --my-coord=lat,lon               My position (goes in shell history)\n"
         "  --my-ecef=x,y,z                  My ECEF position (BrightMeters)\n"
         "  -c <count>                       Ping count for self-probe (default: 5)\n"
-        "\nLocation provider (BSH SDI v2 geo socket):\n"
-        "  BSH_GEO_SOCK                     Set by the BSH SDI agent; tool must be\n"
-        "                                   listed in ~/.config/bsh/geo-allow.\n"
+        "\nLocation provider (BrightNexus / BrightLink):\n"
+        "  baudit shells out to 'bsh-geo --get --format both --json' to read\n"
+        "  the current location from the BrightNexus bridge. The bridge gates the\n"
+        "  request through the user's geo:precise ACL grant. No env vars are read.\n"
         "\nExample:\n"
         "  # Probe from here + paste in two VPS measurements:\n"
         "  baudit --anchor=51.5074,-0.1278,42.3,London \\\n"
@@ -147,7 +150,7 @@ int main(int argc, char **argv)
     }
     if (!dest) usage();
 
-    bs_sdi_get_geo(&my_ecef, &have_my_ecef, &my_geo);
+    bl_glue_get_geo(argv[0], &my_ecef, &have_my_ecef, &my_geo);
     if (!have_my_ecef && !my_geo.valid)
         my_geo = bs_geolocate(NULL);
     if (have_my_ecef && !my_geo.valid)

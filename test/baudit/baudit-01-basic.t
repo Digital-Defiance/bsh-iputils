@@ -1,21 +1,16 @@
 #!/usr/bin/perl -w
 # SPDX-License-Identifier: GPL-2.0-or-later
-# Tests for baudit: basic smoke + BSH SDI v2 geo socket
-#
-# When BSH_GEO_SOCK is set and ping to 127.0.0.1 succeeds, baudit builds a
-# self-anchor whose label includes my_geo.tag.  The --anchor=0,0,5 flag
-# ensures at least one anchor is always present so the audit table is printed
-# regardless of network availability.
+# Tests for baudit: basic smoke + BrightLink success/failure paths.
 
 use Test::Command;
 use Test::More;
 use File::Basename;
+use File::Temp qw(tempdir);
 use Cwd;
 
-my $lib  = File::Basename::dirname(Cwd::abs_path($0)) . '/../lib.pl';
-my $mock = File::Basename::dirname(Cwd::abs_path($0)) . '/../mock_geo_agent.pl';
-require "$lib";
-require "$mock";
+my $here = File::Basename::dirname(Cwd::abs_path($0));
+require "$here/../lib.pl";
+require "$here/../mock_brightlink.pl";
 
 my $tool = get_cmd($ARGV[0] // 'baudit');
 
@@ -37,29 +32,33 @@ my $tool = get_cmd($ARGV[0] // 'baudit');
     };
 }
 
-# ── Basic run to localhost with one anchor ────────────────────
+# ── Bridge unreachable: graceful downgrade ────────────────────
+# The tool MUST exit 0 and produce its normal output even when no bridge
+# is listening. No [brightlink…] tag should appear in stdout.
 {
+    local $ENV{BRIGHTNEXUS_SOCKET} = '/nonexistent/brightnexus.sock';
     my $cmd = Test::Command->new(cmd => "$tool -c 1 --anchor=0,0,5 127.0.0.1");
     $cmd->exit_is_num(0);
-    subtest 'basic output' => sub {
+    subtest 'bridge unreachable falls through' => sub {
         $cmd->stdout_like(qr/baudit/);
+        $cmd->stdout_unlike(qr/\[brightlink/);
     };
 }
 
-# ── SDI v2 geo socket: [sdi] / [sdi:ecef] tag ────────────────
-# Start a mock geo agent (see test/mock_geo_agent.pl), point BSH_GEO_SOCK at
-# the path-file it creates, and verify the [sdi] or [sdi:ecef] tag appears.
-{
-    my ($path_file, $pid) = start_mock_geo_agent();
+# ── Mock bridge: [brightlink:ecef] tag flows through ──────────
+SKIP: {
+    my ($sock, $pid) = start_mock_brightnexus(tool_path => $tool);
+    skip "mock-brightnexus not available", 1 unless defined $sock;
 
-    {
-        local $ENV{BSH_GEO_SOCK} = $path_file;
-        my $cmd = Test::Command->new(cmd => "$tool -c 1 --anchor=0,0,5 127.0.0.1");
-        $cmd->exit_is_num(0);
-        $cmd->stdout_like(qr/\[sdi(?::ecef)?\]/, 'BSH_GEO_SOCK sets [sdi] or [sdi:ecef] tag');
-    }
+    my $home = mock_home();
+    local $ENV{BRIGHTNEXUS_SOCKET} = $sock;
+    local $ENV{HOME} = $home;   # TOFU pin lands in $home/.brightchain/...
 
-    stop_mock_geo_agent($pid);
+    my $cmd = Test::Command->new(cmd => "$tool -c 1 --anchor=0,0,5 127.0.0.1");
+    $cmd->exit_is_num(0);
+    $cmd->stdout_like(qr/\[brightlink(?::ecef)?\]/, 'mock bridge yields [brightlink] tag');
+
+    stop_mock_brightnexus($pid);
 }
 
 done_testing;

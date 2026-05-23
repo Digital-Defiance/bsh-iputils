@@ -21,6 +21,17 @@ PPA_VERSION="${UPSTREAM_VERSION}-${DEBIAN_REVISION}~${SERIES}1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Sanity: libBrightLink submodule must be populated. Launchpad sbuild
+# can't reach out to GitHub during the build, so the source tarball
+# carries the submodule sources verbatim. An empty subprojects/
+# libbrightlink/ here would produce a tarball that fails meson setup
+# on the build host.
+if [ ! -f "${SCRIPT_DIR}/subprojects/libbrightlink/meson.build" ]; then
+    echo "ERROR: subprojects/libbrightlink/meson.build is missing."
+    echo "       Run: git submodule update --init --recursive"
+    exit 1
+fi
+
 echo "==> Building source package ${PACKAGE} ${PPA_VERSION} for ${SERIES}"
 
 # Temporarily rewrite changelog for the target series

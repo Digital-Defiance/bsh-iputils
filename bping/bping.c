@@ -2,13 +2,15 @@
  * bping.c  —  BrightChain physical network audit tool
  *
  * Coordinate source priority (highest → lowest):
- *   --my-ecef=x,y,z      ECEF in BrightMeters (CLI, audit-grade)  [ecef]
- *   --my-coord=lat,lon    Decimal degrees      (CLI, explicit)     [coord]
- *   $BSH_GEO_SOCK         BSH SDI v2 geo socket (RFC SDI v2 §8)   [sdi] / [sdi:ecef]
- *   auto ip-api.com lookup of public IP       (fallback)           [~geoIP]
+ *   --my-ecef=x,y,z      ECEF in BrightMeters (CLI, audit-grade)   [ecef]
+ *   --my-coord=lat,lon    Decimal degrees      (CLI, explicit)      [coord]
+ *   BrightNexus bridge    BrightLink LINK_GEO_GET via 'bsh-geo'     [brightlink] /
+ *                         (BrightLink RFC §9.4)                     [brightlink:ecef]
+ *   auto ip-api.com lookup of public IP        (fallback)           [~geoIP]
  */
 
 #include "../brightspace.h"
+#include "../brightlink_glue.h"
 
 static void print_stats(const char *dest,
                         double min_ms, double avg_ms,
@@ -53,10 +55,10 @@ static void print_stats(const char *dest,
         char src_ecef[48], tgt_ecef[48];
         bs_geo_ecef_str(my_geo,  src_ecef, sizeof(src_ecef));
         bs_geo_ecef_str(tgt_geo, tgt_ecef, sizeof(tgt_ecef));
-        printf("  src %-9s  %s%s%s%s\n",
+        printf("  src %-18s  %s%s%s%s\n",
                my_geo->tag, src_ecef,
                src_loc[0] ? "  (" : "", src_loc, src_loc[0] ? ")" : "");
-        printf("  tgt %-9s  %s%s%s%s\n",
+        printf("  tgt %-18s  %s%s%s%s\n",
                tgt_geo->tag, tgt_ecef,
                tgt_loc[0] ? "  (" : "", tgt_loc, tgt_loc[0] ? ")" : "");
         printf("  geo distance          = %.3f mBM  (~%.0f km)\n", dist, km);
@@ -133,15 +135,17 @@ static void usage(void)
         "  --my-coord=lat,lon        My position (decimal degrees)\n"
         "  --target-ecef=x,y,z      Target ECEF (BrightMeters, audit-grade)\n"
         "  --target-coord=lat,lon    Target position (decimal degrees)\n"
-        "\nLocation provider (BSH SDI v2 geo socket):\n"
-        "  BSH_GEO_SOCK              Set by the BSH SDI agent; tool must be listed\n"
-        "                            in ~/.config/bsh/geo-allow to receive a fix.\n"
-        "  Use 'bsh-geo --exec -- bping ...' as an escape hatch when needed.\n"
+        "\nLocation provider (BrightNexus / BrightLink):\n"
+        "  bping shells out to 'bsh-geo --get --format both --json' to read the\n"
+        "  current location from the BrightNexus bridge. The bridge gates the\n"
+        "  request through the user's geo:precise ACL grant; the first call\n"
+        "  prompts, subsequent calls succeed silently while the grant is live.\n"
+        "  No environment variables are consulted.\n"
         "\nOther flags:\n"
         "  --hops                    Per-hop trace with BrightDate units + geoIP\n"
         "  -h, --help                Show this help\n"
         "\nCoordinate source priority:\n"
-        "  --my-ecef > --my-coord > BSH SDI geo socket > auto-geoIP\n"
+        "  --my-ecef > --my-coord > BrightNexus bridge > auto-geoIP\n"
         "  Target is always auto-geolocated unless an explicit flag is given.\n");
     exit(2);
 }
@@ -188,7 +192,7 @@ int main(int argc, char **argv)
     }
     if (!dest) usage();
 
-    bs_sdi_get_geo(&my_ecef, &have_my_ecef, &my_geo);
+    bl_glue_get_geo(argv[0], &my_ecef, &have_my_ecef, &my_geo);
 
     char cmd[512];
     snprintf(cmd, sizeof(cmd), "ping -c 3 %s 2>&1", dest);

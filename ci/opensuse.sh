@@ -26,8 +26,9 @@ $zypper \
 	iproute2 \
 	jq \
 	libcap-devel \
-	libcap-progs \
 	libidn2-devel \
+	libsecp256k1-devel \
+	libopenssl-devel \
 	libxslt-tools \
 	meson \
 	ninja \

@@ -7,11 +7,13 @@
  *
  * Coordinate source priority (same as all b* tools):
  *   --my-ecef=x,y,z / --my-coord=lat,lon   (CLI)
- *   $BSH_GEO_SOCK                            (BSH SDI v2 geo socket, RFC SDI v2 §8)
+ *   BrightNexus bridge                     (BrightLink LINK_GEO_GET, §9.4
+ *                                           of the BrightLink RFC, via bsh-geo)
  *   auto ip-api.com geoIP                   (fallback)
  */
 
 #include "../brightspace.h"
+#include "../brightlink_glue.h"
 
 #define MAX_HOPS 30
 
@@ -31,9 +33,10 @@ static void usage(void)
         "\nCoordinate flags (go into shell history):\n"
         "  --my-ecef=x,y,z          My ECEF position (BrightMeters)\n"
         "  --my-coord=lat,lon        My position (decimal degrees)\n"
-        "\nLocation provider (BSH SDI v2 geo socket):\n"
-        "  BSH_GEO_SOCK              Set by the BSH SDI agent; tool must be listed\n"
-        "                            in ~/.config/bsh/geo-allow to receive a fix.\n"
+        "\nLocation provider (BrightNexus / BrightLink):\n"
+        "  btraceroute shells out to 'bsh-geo --get --format both --json' to read\n"
+        "  the current location from the BrightNexus bridge. The bridge gates the\n"
+        "  request through the user's geo:precise ACL grant. No env vars are read.\n"
         "\nOptions:\n"
         "  -m <maxhops>              Maximum number of hops (default: 30)\n"
         "  -q <nqueries>             Queries per hop (default: 3)\n"
@@ -81,7 +84,7 @@ int main(int argc, char **argv)
     }
     if (!dest) usage();
 
-    bs_sdi_get_geo(&my_ecef, &have_my_ecef, &my_geo);
+    bl_glue_get_geo(argv[0], &my_ecef, &have_my_ecef, &my_geo);
 
     /* Resolve and geolocate the destination */
     char dest_ip[64] = "";
@@ -114,7 +117,7 @@ int main(int argc, char **argv)
         bs_geo_label(&my_geo, lbl, sizeof(lbl));
         char ecef[48];
         bs_geo_ecef_str(&my_geo, ecef, sizeof(ecef));
-        printf("src %-9s %s%s%s%s\n",
+        printf("src %-18s %s%s%s%s\n",
                my_geo.tag, ecef,
                lbl[0] ? "  (" : "", lbl, lbl[0] ? ")" : "");
     }

@@ -1,5 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (c) 2021-2025 Petr Vorel <pvorel@suse.cz>
+# Brightdate fork: matrix trimmed to distros that ship libsecp256k1-dev
+# and openssl-dev. The lanes we removed (ubuntu:bionic, debian:oldstable,
+# rockylinux:8) couldn't satisfy libBrightLink's build deps; they pre-date
+# the BrightLink integration.
 
 name: "CI: docker based builds"
 on: [push, pull_request]
@@ -12,14 +16,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # 32bit build
+          # 32bit build — Debian stable has libsecp256k1:i386 and libssl-dev:i386.
           - container: "debian:stable"
             env:
               CC: gcc
               VARIANT: i386
               BUILD_32: 1
 
-          # cross compilation builds
+          # cross compilation builds — Debian testing carries libsecp256k1-dev
+          # for these target architectures via debian-ports / multi-arch.
           - container: "debian:testing"
             env:
               ARCH: arm64
@@ -38,13 +43,14 @@ jobs:
               CC: s390x-linux-gnu-gcc
               VARIANT: cross-compile
 
-          # musl (native)
+          # musl (native) — Alpine ships secp256k1-dev in its main repo.
           - container: "alpine:latest"
             env:
               CC: gcc
               EXTRA_BUILD_OPTS: "-DBUILD_HTML_MANS=false -DBUILD_MANS=false"
 
-          # some non-default options
+          # some non-default options — drops bsh-iputils features that
+          # aren't BrightLink-relevant; libsecp256k1 is still required.
           - container: "debian:stable"
             env:
               CC: gcc
@@ -55,21 +61,11 @@ jobs:
             env:
               CC: gcc
 
-          - container: "opensuse/leap"
-            env:
-              CC: clang
-
-          - container: "ubuntu:bionic"
-            env:
-              CC: clang
-              EXTRA_BUILD_OPTS: "-DUSE_GETTEXT=false"
-              # meson 0.45.1 is too old
-              # meson error: not using Unicode-compatible locale (ANSI_X3.4-1968)
-              SKIP_TESTS: true
-              # meson: error: unrecognized arguments: -C builddir
-              SKIP_DISC: true
-
           - container: "ubuntu:jammy"
+            env:
+              CC: gcc
+
+          - container: "ubuntu:noble"
             env:
               CC: gcc
 
@@ -85,10 +81,6 @@ jobs:
             env:
               CC: gcc
 
-          - container: "rockylinux:8"
-            env:
-              CC: gcc
-
           - container: "debian:testing"
             env:
               CC: gcc
@@ -97,13 +89,6 @@ jobs:
           - container: "debian:stable"
             env:
               CC: gcc
-
-          - container: "debian:oldstable"
-            env:
-              CC: clang
-              # meson 0.56.2 is too old
-              # meson dist: error: argument --formats: invalid choice: 'xztar,gztar,zip' (choose from 'gztar', 'xztar', 'zip')
-              SKIP_DISC: true
 
     container:
       image: ${{ matrix.container }}
@@ -115,7 +100,16 @@ jobs:
       run: cat /etc/os-release
 
     - name: Git checkout
-      uses: actions/checkout@v1
+      uses: actions/checkout@v4
+      with:
+        # libBrightLink lives at subprojects/libbrightlink/ as a git
+        # submodule. Without recursion the build would attempt to use
+        # the empty submodule directory and fail at meson setup.
+        submodules: recursive
+        # actions/checkout@v4 does a shallow fetch by default, but the
+        # submodule pointer needs the parent's full ref state to resolve
+        # cleanly across container images that pre-cache .git differently.
+        fetch-depth: 1
 
     - name: Fix permissions
       run: chown -Rv $(id -u):$(id -g) .

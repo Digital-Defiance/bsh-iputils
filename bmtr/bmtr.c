@@ -16,11 +16,13 @@
  *   --my-coord=lat,lon / --my-ecef=x,y,z   (CLI, goes in history)
  *
  * Location provider:
- *   BSH_GEO_SOCK     BSH SDI v2 geo socket (RFC SDI v2 §8); tool must be
- *                    listed in ~/.config/bsh/geo-allow.
+ *   BrightNexus bridge — BrightLink LINK_GEO_GET (RFC §9.4) via the
+ *   'bsh-geo --get --format both --json' helper.  The bridge gates the
+ *   request through the user's geo:precise ACL grant.
  */
 
 #include "../brightspace.h"
+#include "../brightlink_glue.h"
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
@@ -160,7 +162,7 @@ static void draw_table(const char *dest, const bmtr_hop_t *hops, int nhops,
         char lbl[80] = "", ecef[48];
         bs_geo_label(my_geo, lbl, sizeof(lbl));
         bs_geo_ecef_str(my_geo, ecef, sizeof(ecef));
-        printf("src %-9s %s%s%s%s\n",
+        printf("src %-18s %s%s%s%s\n",
                my_geo->tag, ecef,
                lbl[0] ? "  (" : "", lbl, lbl[0] ? ")" : "");
     }
@@ -207,7 +209,7 @@ static void draw_report(const char *dest, const bmtr_hop_t *hops, int nhops,
         char lbl[80] = "", ecef[48];
         bs_geo_label(my_geo, lbl, sizeof(lbl));
         bs_geo_ecef_str(my_geo, ecef, sizeof(ecef));
-        printf("src %-9s %s%s%s%s\n",
+        printf("src %-18s %s%s%s%s\n",
                my_geo->tag, ecef,
                lbl[0] ? "  (" : "", lbl, lbl[0] ? ")" : "");
     }
@@ -251,9 +253,10 @@ static void usage(void)
         "\nCoordinate flags (go into shell history):\n"
         "  --my-ecef=x,y,z      My ECEF position (BrightMeters)\n"
         "  --my-coord=lat,lon    My position (decimal degrees)\n"
-        "\nLocation provider (BSH SDI v2 geo socket):\n"
-        "  BSH_GEO_SOCK          Set by the BSH SDI agent; tool must be listed\n"
-        "                        in ~/.config/bsh/geo-allow to receive a fix.\n");
+        "\nLocation provider (BrightNexus / BrightLink):\n"
+        "  bmtr shells out to 'bsh-geo --get --format both --json' to read the\n"
+        "  current location from the BrightNexus bridge. The bridge gates the\n"
+        "  request through the user's geo:precise ACL grant. No env vars are read.\n");
     exit(2);
 }
 
@@ -307,7 +310,7 @@ int main(int argc, char **argv)
     if (!dest) usage();
     if (maxhops < 1 || maxhops > MAX_HOPS) maxhops = MAX_HOPS;
 
-    bs_sdi_get_geo(&my_ecef, &have_my_ecef, &my_geo);
+    bl_glue_get_geo(argv[0], &my_ecef, &have_my_ecef, &my_geo);
     if (!have_my_ecef && !my_geo.valid)
         my_geo = bs_geolocate(NULL);
     if (have_my_ecef && !my_geo.valid)

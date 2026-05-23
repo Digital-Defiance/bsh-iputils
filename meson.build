@@ -8,7 +8,7 @@ project('iputils', 'c',
 		'warning_level=3',
 		'localstatedir=var',
 	],
-	meson_version : '>=0.44',
+	meson_version : '>=0.56',
 	version : '20260520')
 
 cc = meson.get_compiler('c')
@@ -56,6 +56,19 @@ endif
 m_dep = cc.find_library('m', required : false)
 resolv_dep = cc.find_library('resolv', required : false)
 
+# libBrightLink — canonical C client for the BrightLink Protocol. Lives
+# at subprojects/libbrightlink/ as a git submodule that bsh-iputils and
+# bsh both consume. The protocol code (DD-ECIES, AES-GCM, HKDF, P-256
+# transcript verify, TOFU pin storage) lives there; bsh-iputils only
+# carries the four b* tools and their geo glue.
+#
+# We ask for libbrightlink's test tree to be built when iputils tests are
+# enabled — the mock-brightnexus binary built there is consumed by our
+# own Perl integration tests in test/.
+brightlink_tests_opt = get_option('SKIP_TESTS') ? 'false' : 'true'
+brightlink_proj = subproject('libbrightlink',
+	default_options : ['libbrightlink_tests=' + brightlink_tests_opt])
+libbrightlink_dep = brightlink_proj.get_variable('libbrightlink_dep')
 # USE_CAP is Linux-only; silently force it off on macOS regardless of what was passed
 use_cap = get_option('USE_CAP')
 if use_cap and host_machine.system() == 'darwin'

@@ -24,8 +24,10 @@ apk add \
 	iproute2 \
 	jq \
 	libcap-dev \
+	libsecp256k1-dev \
 	libxslt \
 	meson \
 	musl-dev \
+	openssl-dev \
 	pkgconfig \
 	$TEST_DEPS
