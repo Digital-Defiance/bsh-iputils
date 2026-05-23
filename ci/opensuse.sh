@@ -7,7 +7,9 @@ zypper='zypper --non-interactive install --no-recommends'
 
 if [ "$WITH_TEST_DEPS" ]; then
 	TEST_DEPS="
+	iputils
 	perl-Test-Command
+	traceroute
 "
 	if ! $zypper perl-Socket-GetAddrInfo; then
 		$zypper make perl

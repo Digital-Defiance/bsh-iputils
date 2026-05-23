@@ -7,8 +7,10 @@ apk update
 
 if [ "$WITH_TEST_DEPS" ]; then
 	TEST_DEPS="
+	iputils
 	perl-socket-getaddrinfo
 	perl-test-command
+	traceroute
 "
 fi
 

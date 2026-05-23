@@ -13,12 +13,14 @@ $yum \
 	gettext \
 	git \
 	iproute \
+	iputils \
 	jq \
 	libcap-devel \
 	libsecp256k1-devel \
 	libxslt \
 	openssl-devel \
-	pkg-config
+	pkg-config \
+	traceroute
 
 if [ "$(basename $0)" = "centos.sh" ] || [ "$(basename $0)" = "rockylinux.sh" ]; then
 	# CentOS Linux 7: libidn2-devel, meson, ninja-build are provided by EPEL
@@ -28,8 +30,6 @@ if [ "$(basename $0)" = "centos.sh" ] || [ "$(basename $0)" = "rockylinux.sh" ];
 	# Enable CRB (formerly PowerTools) on CentOS/RHEL/Rocky >= 8 via EPEL
 	# CentOS/RHEL/Rocky >= 8: meson and ninja-build are provided by CRB
 	if [ "$DISTRO_VERSION" != 7 ]; then
-		# Update epel-release because CentOS Stream 9 ships 9-2.el9,
-		# which is unfortunately too old to provide the crb command.
 		dnf -y install 'dnf-command(config-manager)' epel-release
 		crb enable
 	fi

@@ -14,6 +14,8 @@ require "$here/../mock_brightlink.pl";
 
 my $tool = get_cmd($ARGV[0] // 'baudit');
 
+my $have_ping = system("command -v ping >/dev/null 2>&1") == 0;
+
 # ── Smoke: no args ────────────────────────────────────────────
 {
     my $cmd = Test::Command->new(cmd => "$tool");
@@ -33,9 +35,8 @@ my $tool = get_cmd($ARGV[0] // 'baudit');
 }
 
 # ── Bridge unreachable: graceful downgrade ────────────────────
-# The tool MUST exit 0 and produce its normal output even when no bridge
-# is listening. No [brightlink…] tag should appear in stdout.
-{
+SKIP: {
+    skip "ping required for network probe", 2 unless $have_ping;
     local $ENV{BRIGHTNEXUS_SOCKET} = '/nonexistent/brightnexus.sock';
     my $cmd = Test::Command->new(cmd => "$tool -c 1 --anchor=0,0,5 127.0.0.1");
     $cmd->exit_is_num(0);
@@ -47,12 +48,13 @@ my $tool = get_cmd($ARGV[0] // 'baudit');
 
 # ── Mock bridge: [brightlink:ecef] tag flows through ──────────
 SKIP: {
+    skip "ping required for network probe", 1 unless $have_ping;
     my ($sock, $pid) = start_mock_brightnexus(tool_path => $tool);
     skip "mock-brightnexus not available", 1 unless defined $sock;
 
     my $home = mock_home();
     local $ENV{BRIGHTNEXUS_SOCKET} = $sock;
-    local $ENV{HOME} = $home;   # TOFU pin lands in $home/.brightchain/...
+    local $ENV{HOME} = $home;
 
     my $cmd = Test::Command->new(cmd => "$tool -c 1 --anchor=0,0,5 127.0.0.1");
     $cmd->exit_is_num(0);

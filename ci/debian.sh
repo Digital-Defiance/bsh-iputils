@@ -10,15 +10,16 @@ EOF
 	BACKPORT_REPO="xenial-backports"
 fi
 
-# workaround for Ubuntu impish asking to interactively configure tzdata
 export DEBIAN_FRONTEND="noninteractive"
 
 apt update
 
 if [ "$WITH_TEST_DEPS" ]; then
 	TEST_DEPS="
+	iputils-ping
 	libsocket-getaddrinfo-perl
 	libtest-command-perl
+	traceroute
 "
 fi
 

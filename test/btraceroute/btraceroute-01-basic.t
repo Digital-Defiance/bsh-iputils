@@ -13,6 +13,8 @@ require "$here/../mock_brightlink.pl";
 
 my $tool = get_cmd($ARGV[0] // 'btraceroute');
 
+my $have_traceroute = system("command -v traceroute >/dev/null 2>&1") == 0;
+
 # ── Smoke: no args ────────────────────────────────────────────
 {
     my $cmd = Test::Command->new(cmd => "$tool");
@@ -32,7 +34,8 @@ my $tool = get_cmd($ARGV[0] // 'btraceroute');
 }
 
 # ── Bridge unreachable: graceful downgrade ────────────────────
-{
+SKIP: {
+    skip "traceroute required for network probe", 2 unless $have_traceroute;
     local $ENV{BRIGHTNEXUS_SOCKET} = '/nonexistent/brightnexus.sock';
     my $cmd = Test::Command->new(cmd => "$tool -m 1 -q 1 127.0.0.1");
     $cmd->exit_is_num(0);
@@ -44,6 +47,7 @@ my $tool = get_cmd($ARGV[0] // 'btraceroute');
 
 # ── Mock bridge: [brightlink:ecef] tag flows through ──────────
 SKIP: {
+    skip "traceroute required for network probe", 1 unless $have_traceroute;
     my ($sock, $pid) = start_mock_brightnexus(tool_path => $tool);
     skip "mock-brightnexus not available", 1 unless defined $sock;
 
