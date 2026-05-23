@@ -143,6 +143,7 @@ static void usage(void)
         "  No environment variables are consulted.\n"
         "\nOther flags:\n"
         "  --hops                    Per-hop trace with BrightDate units + geoIP\n"
+        "  --reset-brightlink-pin    Forget the BrightNexus TOFU pin and exit\n"
         "  -h, --help                Show this help\n"
         "\nCoordinate source priority:\n"
         "  --my-ecef > --my-coord > BrightNexus bridge > auto-geoIP\n"
@@ -152,6 +153,8 @@ static void usage(void)
 
 int main(int argc, char **argv)
 {
+    bl_glue_handle_global_args(argc, argv);
+
     bs_ecef_t my_ecef, tgt_ecef;
     memset(&my_ecef,  0, sizeof(my_ecef));
     memset(&tgt_ecef, 0, sizeof(tgt_ecef));
@@ -226,6 +229,11 @@ int main(int argc, char **argv)
         bs_ecef_to_geo(my_ecef, &my_geo, "[ecef]");
     if (have_tgt_ecef && !tgt_geo.valid)
         bs_ecef_to_geo(tgt_ecef, &tgt_geo, "[ecef]");
+
+    /* If brightlink missed and we ended up on geoIP, annotate the source
+     * tag with the reason (e.g. "[~geoIP/pin-mismatch]"). Target geo is
+     * always sourced from geoIP and not subject to a brightlink call. */
+    bl_glue_annotate_tag(&my_geo);
 
     int    have_ecef = have_my_ecef && have_tgt_ecef;
     double ecef_d    = have_ecef ? bs_ecef_chord_mbm(my_ecef, tgt_ecef) : 0.0;

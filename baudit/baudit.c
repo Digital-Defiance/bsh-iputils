@@ -48,6 +48,7 @@ static void usage(void)
         "  --my-coord=lat,lon               My position (goes in shell history)\n"
         "  --my-ecef=x,y,z                  My ECEF position (BrightMeters)\n"
         "  -c <count>                       Ping count for self-probe (default: 5)\n"
+        "  --reset-brightlink-pin           Forget the BrightNexus TOFU pin and exit\n"
         "\nLocation provider (BrightNexus / BrightLink):\n"
         "  baudit shells out to 'bsh-geo --get --format both --json' to read\n"
         "  the current location from the BrightNexus bridge. The bridge gates the\n"
@@ -105,6 +106,8 @@ static void weighted_centroid(const anchor_t *anchors, const double *radii,
 
 int main(int argc, char **argv)
 {
+    bl_glue_handle_global_args(argc, argv);
+
     bs_ecef_t my_ecef;
     memset(&my_ecef, 0, sizeof(my_ecef));
     int have_my_ecef = 0;
@@ -155,6 +158,9 @@ int main(int argc, char **argv)
         my_geo = bs_geolocate(NULL);
     if (have_my_ecef && !my_geo.valid)
         bs_ecef_to_geo(my_ecef, &my_geo, "[ecef]");
+
+    /* If brightlink missed, annotate the geoIP tag with the reason. */
+    bl_glue_annotate_tag(&my_geo);
 
     /* Resolve and geolocate target */
     char dest_ip[64] = "";

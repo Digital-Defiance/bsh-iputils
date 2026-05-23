@@ -250,6 +250,7 @@ static void usage(void)
         "  -i <interval>        Seconds between cycles (default: 2)\n"
         "  -m <maxhops>         Max hops (default: 30)\n"
         "  --report             Print final report instead of live display\n"
+        "  --reset-brightlink-pin Forget the BrightNexus TOFU pin and exit\n"
         "\nCoordinate flags (go into shell history):\n"
         "  --my-ecef=x,y,z      My ECEF position (BrightMeters)\n"
         "  --my-coord=lat,lon    My position (decimal degrees)\n"
@@ -262,6 +263,8 @@ static void usage(void)
 
 int main(int argc, char **argv)
 {
+    bl_glue_handle_global_args(argc, argv);
+
     bs_ecef_t my_ecef;
     memset(&my_ecef, 0, sizeof(my_ecef));
     int have_my_ecef = 0;
@@ -315,6 +318,9 @@ int main(int argc, char **argv)
         my_geo = bs_geolocate(NULL);
     if (have_my_ecef && !my_geo.valid)
         bs_ecef_to_geo(my_ecef, &my_geo, "[ecef]");
+
+    /* If brightlink missed, annotate the geoIP tag with the reason. */
+    bl_glue_annotate_tag(&my_geo);
 
     /* Discover hops */
     fprintf(stderr, "Discovering route to %s ...\n", dest);
