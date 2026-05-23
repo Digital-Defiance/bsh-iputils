@@ -49,7 +49,7 @@ jobs:
               CC: gcc
               EXTRA_BUILD_OPTS: "-DBUILD_HTML_MANS=false -DBUILD_MANS=false"
 
-          # some non-default options — drops bsh-iputils features that
+          # some non-default options — drops bright-iputils features that
           # aren't BrightLink-relevant; libsecp256k1 is still required.
           - container: "debian:stable"
             env:

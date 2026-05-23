@@ -142,7 +142,7 @@ check_binaries()
 			[ ! -x "$BUILD_DIR/$i/$i" ] && [ ! -x "$BUILD_DIR/$i" ]
 			continue
 		fi
-		# bsh-iputils builds each b* tool in its own subdir
+		# bright-iputils builds each b* tool in its own subdir
 		# (bping/bping, btraceroute/btraceroute, ...). Upstream iputils
 		# put them at $BUILD_DIR/$i; tolerate both layouts so this
 		# function works against either tree.

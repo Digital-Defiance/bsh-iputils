@@ -1,5 +1,5 @@
 Format: <https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/>
-Upstream-Name: bsh-iputils
+Upstream-Name: bright-iputils
 Upstream-Contact: BrightDate Project <packages@brightdate.org>
 Source: <https://github.com/iputils/iputils>
 

@@ -32,12 +32,12 @@ bping node-01.brightchain.org
 - If latency < physical minimum, the node is lying
 - If latency ≫ minimum, you see routing overhead
 
-# BSH iputils — BrightDate Networking Tools
+# Bright iptils — BrightDate Networking Tools
 
 [![Build Status](https://github.com/iputils/iputils/actions/workflows/ci.yml/badge.svg)](https://github.com/iputils/iputils/actions/workflows/ci.yml)
 [![Coverity Status](https://scan.coverity.com/projects/1944/badge.svg?flat=1)](https://scan.coverity.com/projects/1944)
 
-**BSH iputils** is a Bright Spacetime/Space-ready fork of iputils, providing modernized versions of classic Linux networking tools with a universal, timezone-free time system. All tools output and accept **BrightDate** scalars for timestamps, and are designed for future **BrightSpace** (spatial) and **Bright Spacetime** (4D) extensions—making time, space, and latency math consistent across platforms, timezones, and even planetary boundaries.
+**Bright iptils** is a Bright Spacetime/Space-ready fork of iputils, providing modernized versions of classic Linux networking tools with a universal, timezone-free time system. All tools output and accept **BrightDate** scalars for timestamps, and are designed for future **BrightSpace** (spatial) and **Bright Spacetime** (4D) extensions—making time, space, and latency math consistent across platforms, timezones, and even planetary boundaries.
 
 All binaries are renamed with a `b` prefix to coexist with system tools:
 
@@ -78,15 +78,15 @@ Build dependencies are listed in scripts in the `ci/` directory.
 
 ### Cloning
 
-bsh-iputils carries [libBrightLink](https://github.com/Digital-Defiance/libbrightlink) at `subprojects/libbrightlink/` as a git submodule. After cloning, initialise it:
+bright-iputils carries [libBrightLink](https://github.com/Digital-Defiance/libbrightlink) at `subprojects/libbrightlink/` as a git submodule. After cloning, initialise it:
 
 ```
-git clone https://github.com/Digital-Defiance/bsh-iputils.git
-cd bsh-iputils
+git clone https://github.com/Digital-Defiance/bright-iputils.git
+cd bright-iputils
 git submodule update --init --recursive
 ```
 
-Or in one shot with `git clone --recurse-submodules https://github.com/Digital-Defiance/bsh-iputils.git`.
+Or in one shot with `git clone --recurse-submodules https://github.com/Digital-Defiance/bright-iputils.git`.
 
 The build will fail at `meson setup` if the submodule directory is empty.
 
@@ -148,7 +148,7 @@ See <https://www.kernel.org/doc/html/latest/process/coding-style.html>.
 
 Localization is hosted on [Fedora Weblate](https://translate.fedoraproject.org/projects/iputils/iputils/).
 
-## Tools included in BSH iputils
+## Tools included in Bright iptils
 
 - [`barping`](arping.c) — send ARP requests, BrightDate-aware
 - [`bclockdiff`](bclockdiff.c) — measure clock difference, BrightDate output

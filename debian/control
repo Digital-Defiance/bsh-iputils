@@ -1,4 +1,4 @@
-Source: bsh-iputils
+Source: bright-iputils
 Section: net
 Priority: optional
 Maintainer: BrightDate Project <packages@brightdate.org>
@@ -18,11 +18,11 @@ Rules-Requires-Root: no
 Vcs-Browser: https://github.com/iputils/iputils
 Vcs-Git: https://github.com/iputils/iputils.git
 
-Package: bsh-iputils
+Package: bright-iputils
 Architecture: linux-any
-Depends: ${shlibs:Depends}, ${misc:Depends}, bsh-shell
+Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: BrightDate/BrightSpace networking tools (bping, bclockdiff, btraceroute, bmtr, baudit)
- BSH iputils is a BrightDate/BrightSpace-ready fork of iputils, providing
+ Bright iptils is a BrightDate/BrightSpace-ready fork of iputils, providing
  modernized versions of classic Linux networking tools with a universal,
  timezone-free time system. All tools output and accept BrightDate scalars
  for timestamps and are designed for BrightSpace (spatial) and Bright

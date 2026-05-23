@@ -57,9 +57,9 @@ m_dep = cc.find_library('m', required : false)
 resolv_dep = cc.find_library('resolv', required : false)
 
 # libBrightLink — canonical C client for the BrightLink Protocol. Lives
-# at subprojects/libbrightlink/ as a git submodule that bsh-iputils and
+# at subprojects/libbrightlink/ as a git submodule that bright-iputils and
 # bsh both consume. The protocol code (DD-ECIES, AES-GCM, HKDF, P-256
-# transcript verify, TOFU pin storage) lives there; bsh-iputils only
+# transcript verify, TOFU pin storage) lives there; bright-iputils only
 # carries the four b* tools and their geo glue.
 #
 # We ask for libbrightlink's test tree to be built when iputils tests are
