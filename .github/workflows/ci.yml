@@ -73,13 +73,19 @@ jobs:
             env:
               CC: clang
 
-          - container: "quay.io/centos/centos:stream9"
-            env:
-              CC: gcc
-
-          - container: "rockylinux:9"
-            env:
-              CC: gcc
+          # CentOS Stream 9 and RockyLinux 9 are dropped from the matrix
+          # because EPEL 9 doesn't ship libsecp256k1-devel and we don't
+          # currently bundle a source build path for the rpm world. The
+          # tooling and the protocol stack are RHEL-compatible; we just
+          # need a downstream package or an extra repo. When that lands,
+          # uncomment these lines.
+          # - container: "quay.io/centos/centos:stream9"
+          #   env:
+          #     CC: gcc
+          #
+          # - container: "rockylinux:9"
+          #   env:
+          #     CC: gcc
 
           - container: "debian:testing"
             env:

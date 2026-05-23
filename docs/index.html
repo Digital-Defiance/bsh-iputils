@@ -805,6 +805,27 @@
               weighted centroid estimate with a consistency verdict.
             </p>
           </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔐</div>
+            <h3>Hardware-anchored geo</h3>
+            <p>
+              Each <code>b*</code> tool reads its position from
+              <a class="link" href="https://brightnexus.digitaldefiance.org/"
+                ><strong>BrightNexus</strong></a
+              >, the per-user resident bridge whose identity is rooted in
+              Apple's Secure Enclave on macOS or TPM2 on Linux. Tools speak
+              the
+              <a class="link" href="https://github.com/Digital-Defiance/BrightChain/blob/main/docs/papers/brightlink.md"
+                >BrightLink Protocol</a
+              > directly via
+              <a class="link" href="https://github.com/Digital-Defiance/libbrightlink"
+                ><code>libBrightLink</code></a
+              >. The user grants <code>geo:precise</code> per-binary;
+              <code>bping</code>, <code>btraceroute</code>,
+              <code>bmtr</code>, and <code>baudit</code> each get their own
+              ACL entry and TOFU pin.
+            </p>
+          </div>
         </div>
 
         <div class="terminal" style="margin-top: 2.5rem; text-align: left">
@@ -933,7 +954,9 @@ sudo apt update</code></pre>
                 <h3>Prerequisites</h3>
                 <p>
                   A C compiler (<code>clang</code> or <code>gcc</code>),
-                  <code>meson ≥ 0.57</code>, <code>ninja</code>, and
+                  <code>meson ≥ 0.56</code>, <code>ninja</code>,
+                  <code>libsecp256k1-dev</code>,
+                  <code>libssl-dev</code> (or system OpenSSL), plus
                   <code>libcap-dev</code> (Linux) or Xcode CLI tools (macOS).
                   Works on both platforms — install via Homebrew on macOS or
                   build with meson on Linux.
@@ -944,10 +967,22 @@ sudo apt update</code></pre>
               <div class="step-num">B</div>
               <div class="step-body">
                 <h3>Clone &amp; build</h3>
-                <pre><code>git clone https://github.com/Digital-Defiance/bsh-iputils.git
+                <pre><code>git clone --recurse-submodules \
+    https://github.com/Digital-Defiance/bsh-iputils.git
   cd bsh-iputils
   meson setup builddir
   ninja -C builddir</code></pre>
+                <p style="margin-top: 0.5rem; font-size: 0.875rem">
+                  The <code>--recurse-submodules</code> flag pulls in
+                  <a class="link" href="https://github.com/Digital-Defiance/libbrightlink"
+                    ><strong>libBrightLink</strong></a
+                  >, the BrightLink Protocol C client used by every
+                  <code>b*</code> tool to talk to the
+                  <a class="link" href="https://brightnexus.digitaldefiance.org/"
+                    ><strong>BrightNexus</strong></a
+                  > bridge. If you've already cloned without it, run
+                  <code>git submodule update --init --recursive</code>.
+                </p>
               </div>
             </div>
             <div class="step">
@@ -969,7 +1004,12 @@ sudo apt update</code></pre>
             <code>ls -l</code>, <code>stat</code>, <code>history -d</code>, and
             <code>$BRIGHTEPOCH</code> all speak the same float.
             <code>bping</code> and the rest of bsh-iputils integrate
-            directly.
+            directly. Each <code>b*</code> tool registers with
+            <a class="link" href="https://brightnexus.digitaldefiance.org/"
+              ><strong>BrightNexus</strong></a
+            > on first run to read the host's hardware-anchored geo fix —
+            see <a class="link" href="https://github.com/Digital-Defiance/bsh-iputils/blob/main/BSPACE.md"
+              >BSPACE.md</a> for the per-tool ACL grain and TOFU pin model.
           </p>
         </div>
       </div>

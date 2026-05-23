@@ -90,6 +90,27 @@ Or in one shot with `git clone --recurse-submodules https://github.com/Digital-D
 
 The build will fail at `meson setup` if the submodule directory is empty.
 
+## BrightLink + BrightNexus integration
+
+Each `b*` tool reads the host's position from [BrightNexus][nexus], the per-user resident bridge whose identity is anchored in Apple's Secure Enclave on macOS or TPM2 / PKCS#11 on Linux. Tools speak the [BrightLink Protocol][rfc] directly via [libBrightLink][lib], a static C library that ships as a git submodule.
+
+[rfc]: https://github.com/Digital-Defiance/BrightChain/blob/main/docs/papers/brightlink.md
+[nexus]: https://brightnexus.digitaldefiance.org/
+[lib]: https://github.com/Digital-Defiance/libbrightlink
+
+| Component | Where it lives | Role |
+|-----------|----------------|------|
+| BrightNexus | macOS menu-bar app / Linux system-tray app | Holds the device's geo fix, gates per-binary `geo:precise` ACL grants, signs registration transcripts with its hardware-rooted P-256 key. |
+| libBrightLink | `subprojects/libbrightlink/` (git submodule) | The C client. Implements `LINK_REGISTER` (DD-ECIES envelope, transcript verify, TOFU pin) and `LINK_GEO_GET`. |
+| `brightlink_glue.h` | this repo | One-call adapter on top of libBrightLink for the iputils tools. |
+| Each `b*` tool | this repo | Calls `bl_glue_get_geo(argv[0], ...)` once at startup. Falls through silently to geoIP if the bridge isn't running or the user denies the scope. |
+
+**ACL grain.** Each binary registers as itself. When you first run `bping` against an unfamiliar host, BrightNexus prompts you to grant `geo:precise` to `bping`. The next day's `btraceroute` invocation gets its own prompt — separate trust decision, separate grant, separate TOFU pin file at `~/.brightchain/iputils-pins/<binary>.sep-pub`.
+
+**Diagnostics.** Set `BRIGHTLINK_DEBUG=1` in the environment to surface one-line stderr diagnostics on bridge errors. By default the tools fall through silently to geoIP — the user's policy decision is "is this binary allowed to know where I am", not "should this tool work at all".
+
+See [BSPACE.md](BSPACE.md) for the full coordinate-source priority chain, the on-disk pin format, and the threat model.
+
 ## Supported libc
 
 - [glibc](https://www.gnu.org/software/libc/)

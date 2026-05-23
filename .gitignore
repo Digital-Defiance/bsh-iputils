@@ -11,6 +11,11 @@ core
 /builddir
 build/
 build-*/
+# IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
 # Meson subproject machinery — wraplock files are generated alongside
 # our git submodules and would conflict with the SHA tracking we get
 # from git itself.
