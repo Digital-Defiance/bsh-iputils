@@ -139,14 +139,25 @@ check_binaries()
 	for i in $BINARIES; do
 		if echo "$EXTRA_BUILD_OPTS" | grep -i -q -- "-DBUILD_${i}=false"; then
 			echo "$i should not be build"
-			[ ! -x "$BUILD_DIR/$i" ]
+			[ ! -x "$BUILD_DIR/$i/$i" ] && [ ! -x "$BUILD_DIR/$i" ]
 			continue
 		fi
-		[ -x "$BUILD_DIR/$i" ]
-		if [ "$(uname -s)" = "Darwin" ]; then
-			file "$BUILD_DIR/$i" | grep -E "Mach-O.*executable"
+		# bsh-iputils builds each b* tool in its own subdir
+		# (bping/bping, btraceroute/btraceroute, ...). Upstream iputils
+		# put them at $BUILD_DIR/$i; tolerate both layouts so this
+		# function works against either tree.
+		if [ -x "$BUILD_DIR/$i/$i" ]; then
+			binary="$BUILD_DIR/$i/$i"
+		elif [ -x "$BUILD_DIR/$i" ]; then
+			binary="$BUILD_DIR/$i"
 		else
-			file "$BUILD_DIR/$i" | grep -E "$i.*${bits}-bit .*(executable|shared object).*$arch.*dynamically linked"
+			echo "$i: binary not found" >&2
+			return 1
+		fi
+		if [ "$(uname -s)" = "Darwin" ]; then
+			file "$binary" | grep -E "Mach-O.*executable"
+		else
+			file "$binary" | grep -E "$i.*${bits}-bit .*(executable|shared object).*$arch.*dynamically linked"
 		fi
 	done
 }
