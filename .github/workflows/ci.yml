@@ -99,16 +99,38 @@ jobs:
     - name: Show OS
       run: cat /etc/os-release
 
+    # The container images don't ship git pre-installed, but
+    # actions/checkout@v4 needs git >= 2.18 in PATH to handle the
+    # submodules: recursive option. So we install git first via the
+    # smallest possible package, then check out without recursion, then
+    # let the per-distro dep script install the rest, and finally pull
+    # the submodule by hand from the populated container.
+    - name: Install git for actions/checkout
+      run: |
+        if   command -v apt-get  >/dev/null 2>&1; then
+            apt-get update && apt-get install -y --no-install-recommends git ca-certificates
+        elif command -v dnf      >/dev/null 2>&1; then
+            dnf install -y git ca-certificates
+        elif command -v yum      >/dev/null 2>&1; then
+            yum install -y git ca-certificates
+        elif command -v zypper   >/dev/null 2>&1; then
+            zypper --non-interactive install --no-recommends git ca-certificates
+        elif command -v apk      >/dev/null 2>&1; then
+            apk add --no-cache git ca-certificates
+        else
+            echo "no known package manager; cannot install git" >&2
+            exit 1
+        fi
+
     - name: Git checkout
       uses: actions/checkout@v4
       with:
         # libBrightLink lives at subprojects/libbrightlink/ as a git
-        # submodule. Without recursion the build would attempt to use
-        # the empty submodule directory and fail at meson setup.
+        # submodule. The cross-compile lanes can't reach the network
+        # later either, so we recursively clone here and trust the
+        # ci/<distro>.sh dep script to add libsecp256k1-dev / libssl-dev
+        # for the libBrightLink build inside the parent's meson run.
         submodules: recursive
-        # actions/checkout@v4 does a shallow fetch by default, but the
-        # submodule pointer needs the parent's full ref state to resolve
-        # cleanly across container images that pre-cache .git differently.
         fetch-depth: 1
 
     - name: Fix permissions
