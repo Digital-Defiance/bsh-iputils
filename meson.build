@@ -57,8 +57,9 @@ m_dep = cc.find_library('m', required : false)
 resolv_dep = cc.find_library('resolv', required : false)
 
 # libBrightLink — canonical C client for the BrightLink Protocol. Lives
-# at subprojects/libbrightlink/ as a git submodule that bright-iputils and
-# bsh both consume. The protocol code (DD-ECIES, AES-GCM, HKDF, P-256
+# at subprojects/libbrightlink/ as vendored source (see
+# tools/update-libbrightlink.sh). Launchpad recipe builds cannot rely on
+# git submodules. The protocol code (DD-ECIES, AES-GCM, HKDF, P-256
 # transcript verify, TOFU pin storage) lives there; bright-iputils only
 # carries the four b* tools and their geo glue.
 #

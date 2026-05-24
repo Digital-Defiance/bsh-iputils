@@ -1,3 +1,0 @@
-[submodule "subprojects/libbrightlink"]
-	path = subprojects/libbrightlink
-	url = https://github.com/Digital-Defiance/libbrightlink.git

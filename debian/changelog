@@ -1,3 +1,18 @@
+bright-iputils (20260524-1) unstable; urgency=medium
+
+  * vendoring process
+  * chore: update libbrightlink submodule reference for release
+
+ -- Jessica <jessica@digitaldefiance.org>  Sat, 24 May 2026 03:30:00 +0000
+
+bright-iputils (20260523-3) unstable; urgency=medium
+
+  * Vendor libbrightlink in-tree for Launchpad/PPA builds (git-build-recipe
+    does not init submodules, which left subprojects/libbrightlink empty).
+  * Fix build-ppa.sh REPO_ROOT path and add tools/update-libbrightlink.sh.
+
+ -- Jessica <jessica@digitaldefiance.org>  Sat, 24 May 2026 03:30:00 +0000
+
 bright-iputils (20260523-2) unstable; urgency=medium
 
   * Add --reset-brightlink-pin global flag to all b* tools

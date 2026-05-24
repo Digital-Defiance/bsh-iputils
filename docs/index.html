@@ -967,21 +967,19 @@ sudo apt update</code></pre>
               <div class="step-num">B</div>
               <div class="step-body">
                 <h3>Clone &amp; build</h3>
-                <pre><code>git clone --recurse-submodules \
-    https://github.com/Digital-Defiance/bright-iputils.git
+                <pre><code>git clone https://github.com/Digital-Defiance/bright-iputils.git
   cd bright-iputils
   meson setup builddir
   ninja -C builddir</code></pre>
                 <p style="margin-top: 0.5rem; font-size: 0.875rem">
-                  The <code>--recurse-submodules</code> flag pulls in
                   <a class="link" href="https://github.com/Digital-Defiance/libbrightlink"
                     ><strong>libBrightLink</strong></a
                   >, the BrightLink Protocol C client used by every
                   <code>b*</code> tool to talk to the
                   <a class="link" href="https://brightnexus.digitaldefiance.org/"
                     ><strong>BrightNexus</strong></a
-                  > bridge. If you've already cloned without it, run
-                  <code>git submodule update --init --recursive</code>.
+                  > bridge, is vendored in-tree at
+                  <code>subprojects/libbrightlink/</code>.
                 </p>
               </div>
             </div>

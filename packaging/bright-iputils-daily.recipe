@@ -1,0 +1,13 @@
+# git-build-recipe format 0.4 deb-version {debupstream}-0~{revtime}
+#
+# Launchpad daily recipe for bright-iputils. Import this at:
+# https://code.launchpad.net/~digital-defiance/+recipe/bright-iputils-daily
+#
+# libBrightLink is vendored in-tree at subprojects/libbrightlink/ so this
+# recipe only needs the main branch. Do not rely on git submodules here:
+# git-build-recipe does not run `git submodule update --init`.
+#
+# If you ever switch back to a submodule workflow, nest the dependency
+# explicitly after importing it to Launchpad, e.g.:
+#   nest libbrightlink lp:~digital-defiance/libbrightlink subprojects/libbrightlink <commit>
+lp:bright-iputils main

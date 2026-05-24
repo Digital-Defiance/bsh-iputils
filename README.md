@@ -78,21 +78,24 @@ Build dependencies are listed in scripts in the `ci/` directory.
 
 ### Cloning
 
-bright-iputils carries [libBrightLink](https://github.com/Digital-Defiance/libbrightlink) at `subprojects/libbrightlink/` as a git submodule. After cloning, initialise it:
+bright-iputils carries [libBrightLink](https://github.com/Digital-Defiance/libbrightlink) at `subprojects/libbrightlink/` as **vendored source** (not a git submodule). A normal clone is enough:
 
 ```
 git clone https://github.com/Digital-Defiance/bright-iputils.git
 cd bright-iputils
-git submodule update --init --recursive
 ```
 
-Or in one shot with `git clone --recurse-submodules https://github.com/Digital-Defiance/bright-iputils.git`.
+To refresh libBrightLink from upstream:
 
-The build will fail at `meson setup` if the submodule directory is empty.
+```
+./tools/update-libbrightlink.sh
+```
+
+The build will fail at `meson setup` if `subprojects/libbrightlink/meson.build` is missing.
 
 ## BrightLink + BrightNexus integration
 
-Each `b*` tool reads the host's position from [BrightNexus][nexus], the per-user resident bridge whose identity is anchored in Apple's Secure Enclave on macOS or TPM2 / PKCS#11 on Linux. Tools speak the [BrightLink Protocol][rfc] directly via [libBrightLink][lib], a static C library that ships as a git submodule.
+Each `b*` tool reads the host's position from [BrightNexus][nexus], the per-user resident bridge whose identity is anchored in Apple's Secure Enclave on macOS or TPM2 / PKCS#11 on Linux. Tools speak the [BrightLink Protocol][rfc] directly via [libBrightLink][lib], a static C library vendored under `subprojects/libbrightlink/`.
 
 [rfc]: https://github.com/Digital-Defiance/BrightChain/blob/main/docs/papers/brightlink.md
 [nexus]: https://brightnexus.digitaldefiance.org/
@@ -101,7 +104,7 @@ Each `b*` tool reads the host's position from [BrightNexus][nexus], the per-user
 | Component | Where it lives | Role |
 |-----------|----------------|------|
 | BrightNexus | macOS menu-bar app / Linux system-tray app | Holds the device's geo fix, gates per-binary `geo:precise` ACL grants, signs registration transcripts with its hardware-rooted P-256 key. |
-| libBrightLink | `subprojects/libbrightlink/` (git submodule) | The C client. Implements `LINK_REGISTER` (DD-ECIES envelope, transcript verify, TOFU pin) and `LINK_GEO_GET`. |
+| libBrightLink | `subprojects/libbrightlink/` (vendored) | The C client. Implements `LINK_REGISTER` (DD-ECIES envelope, transcript verify, TOFU pin) and `LINK_GEO_GET`. |
 | `brightlink_glue.h` | this repo | One-call adapter on top of libBrightLink for the iputils tools. |
 | Each `b*` tool | this repo | Calls `bl_glue_get_geo(argv[0], ...)` once at startup. Falls through silently to geoIP if the bridge isn't running or the user denies the scope. |
 

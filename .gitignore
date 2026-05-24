@@ -17,8 +17,7 @@ build-*/
 *.swp
 *.swo
 # Meson subproject machinery — wraplock files are generated alongside
-# our git submodules and would conflict with the SHA tracking we get
-# from git itself.
+# vendored subprojects and would conflict with in-tree source tracking.
 subprojects/.wraplock
 subprojects/*.wrap.json
 subprojects/packagecache/

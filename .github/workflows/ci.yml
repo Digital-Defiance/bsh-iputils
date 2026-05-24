@@ -106,11 +106,7 @@ jobs:
       run: cat /etc/os-release
 
     # The container images don't ship git pre-installed, but
-    # actions/checkout@v4 needs git >= 2.18 in PATH to handle the
-    # submodules: recursive option. So we install git first via the
-    # smallest possible package, then check out without recursion, then
-    # let the per-distro dep script install the rest, and finally pull
-    # the submodule by hand from the populated container.
+    # actions/checkout@v4 needs git >= 2.18 in PATH.
     - name: Install git for actions/checkout
       run: |
         if   command -v apt-get  >/dev/null 2>&1; then
@@ -131,12 +127,6 @@ jobs:
     - name: Git checkout
       uses: actions/checkout@v4
       with:
-        # libBrightLink lives at subprojects/libbrightlink/ as a git
-        # submodule. The cross-compile lanes can't reach the network
-        # later either, so we recursively clone here and trust the
-        # ci/<distro>.sh dep script to add libsecp256k1-dev / libssl-dev
-        # for the libBrightLink build inside the parent's meson run.
-        submodules: recursive
         fetch-depth: 1
 
     - name: Fix permissions

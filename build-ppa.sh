@@ -19,16 +19,14 @@ DEBIAN_REVISION="1"
 PPA_VERSION="${UPSTREAM_VERSION}-${DEBIAN_REVISION}~${SERIES}1"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+REPO_ROOT="${SCRIPT_DIR}"
 
-# Sanity: libBrightLink submodule must be populated. Launchpad sbuild
-# can't reach out to GitHub during the build, so the source tarball
-# carries the submodule sources verbatim. An empty subprojects/
-# libbrightlink/ here would produce a tarball that fails meson setup
-# on the build host.
-if [ ! -f "${SCRIPT_DIR}/subprojects/libbrightlink/meson.build" ]; then
+# libBrightLink must be present in the source tree. Launchpad sbuild has
+# no network and git-build-recipe does not init submodules, so we vendor
+# libbrightlink at subprojects/libbrightlink/ (see tools/update-libbrightlink.sh).
+if [ ! -f "${REPO_ROOT}/subprojects/libbrightlink/meson.build" ]; then
     echo "ERROR: subprojects/libbrightlink/meson.build is missing."
-    echo "       Run: git submodule update --init --recursive"
+    echo "       Run: ./tools/update-libbrightlink.sh"
     exit 1
 fi
 
