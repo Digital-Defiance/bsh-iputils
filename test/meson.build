@@ -2,6 +2,7 @@ subdir('bclockdiff')
 subdir('btraceroute')
 subdir('bmtr')
 subdir('baudit')
+subdir('color')
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (c) 2021 Petr Vorel <pvorel@suse.cz>
 

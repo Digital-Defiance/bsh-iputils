@@ -25,6 +25,7 @@
 
 #include "../brightspace.h"
 #include "../brightlink_glue.h"
+#include "../iputils_color.h"
 
 #define MAX_ANCHORS 32
 
@@ -49,6 +50,7 @@ static void usage(void)
         "  --my-ecef=x,y,z                  My ECEF position (BrightMeters)\n"
         "  -c <count>                       Ping count for self-probe (default: 5)\n"
         "  --reset-brightlink-pin           Forget the BrightNexus TOFU pin and exit\n"
+        IPU_COLOR_USAGE
         "\nLocation provider (BrightNexus / BrightLink):\n"
         "  baudit shells out to 'bsh-geo --get --format both --json' to read\n"
         "  the current location from the BrightNexus bridge. The bridge gates the\n"
@@ -106,7 +108,10 @@ static void weighted_centroid(const anchor_t *anchors, const double *radii,
 
 int main(int argc, char **argv)
 {
+    const ipu_colors_t *c;
     bl_glue_handle_global_args(argc, argv);
+    ipu_color_init(&argc, argv);
+    c = &ipu_colors;
 
     bs_ecef_t my_ecef;
     memset(&my_ecef, 0, sizeof(my_ecef));
@@ -214,14 +219,14 @@ int main(int argc, char **argv)
     }
 
     /* ── Print target info ───────────────────────────────── */
-    printf("baudit — %s", dest);
+    printf("%sbaudit — %s%s", IPU(c, title), dest, IPU(c, reset));
     if (dest_ip[0] && strcmp(dest_ip, dest) != 0)
         printf(" (%s)", dest_ip);
     if (tgt_geo.valid) {
         char lbl[80] = "";
         bs_geo_label(&tgt_geo, lbl, sizeof(lbl));
-        if (lbl[0]) printf("  %s", lbl);
-        printf("  %s", tgt_geo.tag);
+        if (lbl[0]) printf("  %s%s%s", IPU(c, location), lbl, IPU(c, reset));
+        printf("  %s%s%s", IPU(c, tag), tgt_geo.tag, IPU(c, reset));
     }
     printf("\n");
 
@@ -232,8 +237,15 @@ int main(int argc, char **argv)
 
     /* ── Per-anchor analysis ─────────────────────────────── */
     printf("\n");
-    printf("  %-28s  %9s  %9s  %9s  %10s  %8s  %8s  %8s\n",
-           "anchor", "x(BM)", "y(BM)", "z(BM)", "rtt(ms)", "ring(km)", "tgt_dist", "in_ring?");
+    printf("  %s%-28s%s  %s%-9s%s  %s%-9s%s  %s%-9s%s  %s%-10s%s  %s%-8s%s  %s%-8s%s  %s%-8s%s\n",
+           IPU(c, header), "anchor", IPU(c, reset),
+           IPU(c, header), "x(BM)", IPU(c, reset),
+           IPU(c, header), "y(BM)", IPU(c, reset),
+           IPU(c, header), "z(BM)", IPU(c, reset),
+           IPU(c, header), "rtt(ms)", IPU(c, reset),
+           IPU(c, header), "ring(km)", IPU(c, reset),
+           IPU(c, header), "tgt_dist", IPU(c, reset),
+           IPU(c, header), "in_ring?", IPU(c, reset));
     printf("  %-28s  %9s  %9s  %9s  %10s  %8s  %8s  %8s\n",
            "----------------------------",
            "---------", "---------", "---------",
@@ -262,17 +274,24 @@ int main(int argc, char **argv)
         inside[i] = in_ring;
 
         char dist_buf[16] = "?", in_buf[8] = "?";
+        const char *in_style;
         if (tgt_dist_km >= 0.0)
             snprintf(dist_buf, sizeof(dist_buf), "%.0f", tgt_dist_km);
         if (tgt_geo.valid)
             snprintf(in_buf, sizeof(in_buf), "%s", in_ring ? "yes" : "NO");
+        in_style = ipu_in_ring_style(c, in_ring);
 
         double ax, ay, az;
         bs_latlon_to_ecef(a->lat, a->lon, &ax, &ay, &az);
-        printf("  %-28s  %9.5f  %9.5f  %9.5f  %10.3f  %8.0f  %8s  %8s\n",
-               a->label[0] ? a->label : "(unnamed)",
-               ax, ay, az, a->rtt_ms,
-               radius_km, dist_buf, in_buf);
+        printf("  %s%-28s%s  %s%9.5f%s  %s%9.5f%s  %s%9.5f%s  %s%10.3f%s  %s%8.0f%s  %s%8s%s  %s%8s%s\n",
+               IPU(c, host), a->label[0] ? a->label : "(unnamed)", IPU(c, reset),
+               IPU(c, value), ax, IPU(c, reset),
+               IPU(c, value), ay, IPU(c, reset),
+               IPU(c, value), az, IPU(c, reset),
+               IPU(c, rtt), a->rtt_ms, IPU(c, reset),
+               IPU(c, value), radius_km, IPU(c, reset),
+               IPU(c, value), dist_buf, IPU(c, reset),
+               in_style, in_buf, IPU(c, reset));
     }
 
     /* ── Centroid estimate ───────────────────────────────── */
@@ -281,37 +300,56 @@ int main(int argc, char **argv)
     weighted_centroid(anchors, radii, nanchors, &est_lat, &est_lon);
     double cx, cy, cz;
     bs_latlon_to_ecef(est_lat, est_lon, &cx, &cy, &cz);
-    printf("  weighted centroid     = %.5f, %.5f, %.5f BM\n", cx, cy, cz);
+    printf("  ");
+    ipu_fprint_label(stdout, c, c->label, "weighted centroid", 22);
+    printf("     = %s%.5f, %.5f, %.5f%s %sBM%s\n",
+           IPU(c, value), cx, cy, cz, IPU(c, reset),
+           IPU(c, unit), IPU(c, reset));
 
-    /* Smallest ring radius = tightest upper bound on source-target distance */
     double tightest_km = 1e9;
     for (int i = 0; i < nanchors; ++i)
         if (radii[i] < tightest_km) tightest_km = radii[i];
-    printf("  tightest ring radius  = %.0f km  (target within %.0f km of best anchor)\n",
-           tightest_km, tightest_km);
+    printf("  ");
+    ipu_fprint_label(stdout, c, c->label, "tightest ring radius", 22);
+    printf("  = %s%.0f%s %skm%s  (%starget within %.0f km of best anchor%s)\n",
+           IPU(c, value), tightest_km, IPU(c, reset),
+           IPU(c, unit), IPU(c, reset),
+           IPU(c, detail), tightest_km, IPU(c, reset));
 
-    /* Consistency check */
     if (tgt_geo.valid && nanchors > 0) {
         double score = (double)n_inside / nanchors * 100.0;
-        printf("  geoIP consistency     = %d/%d anchors (%.0f%%)\n",
-               n_inside, nanchors, score);
+        const char *score_style = (n_inside == nanchors) ? c->ok : c->warn;
+        printf("  ");
+        ipu_fprint_label(stdout, c, c->label, "geoIP consistency", 22);
+        printf("     = %s%d/%d%s anchors (%s%.0f%%%s)\n",
+               IPU(c, value), n_inside, nanchors, IPU(c, reset),
+               score_style, score, IPU(c, reset));
         if (n_inside == nanchors) {
             char lbl[80] = "";
             bs_geo_label(&tgt_geo, lbl, sizeof(lbl));
-            printf("  verdict               : consistent — geoIP %s is plausible\n",
-                   lbl[0] ? lbl : tgt_geo.tag);
+            printf("  ");
+            ipu_fprint_label(stdout, c, c->label, "verdict", 22);
+            printf("               : %sconsistent — geoIP %s is plausible%s\n",
+                   IPU(c, ok),
+                   lbl[0] ? lbl : tgt_geo.tag,
+                   IPU(c, reset));
         } else {
-            printf("  verdict               : INCONSISTENT — geoIP placement conflicts\n"
-                   "                          with %d anchor(s) — possible anycast / VPN\n",
-                   nanchors - n_inside);
+            printf("  ");
+            ipu_fprint_label(stdout, c, c->label, "verdict", 22);
+            printf("               : %sINCONSISTENT — geoIP placement conflicts\n"
+                   "                          with %d anchor(s) — possible anycast / VPN%s\n",
+                   IPU(c, bad), nanchors - n_inside, IPU(c, reset));
         }
     }
 
-    /* Distance from centroid estimate to geoIP */
     if (tgt_geo.valid) {
         double cdist = bs_haversine_km(est_lat, est_lon,
                                        tgt_geo.lat, tgt_geo.lon);
-        printf("  centroid → geoIP      = %.0f km\n", cdist);
+        printf("  ");
+        ipu_fprint_label(stdout, c, c->label, "centroid → geoIP", 22);
+        printf("      = %s%.0f%s %skm%s\n",
+               IPU(c, value), cdist, IPU(c, reset),
+               IPU(c, unit), IPU(c, reset));
     }
 
     return 0;

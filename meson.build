@@ -9,7 +9,7 @@ project('iputils', 'c',
 		'localstatedir=var',
 	],
 	meson_version : '>=0.56',
-	version : '20260520')
+	version : '20260529')
 
 cc = meson.get_compiler('c')
 
@@ -103,6 +103,7 @@ git_version_h = vcs_tag(
 # Shared common library
 common_sources = files(
 	'iputils_common.h', 'iputils_common.c',
+	'iputils_color.h', 'iputils_color.c',
 	'md5.h', 'md5.c'
 )
 libcommon = static_library(

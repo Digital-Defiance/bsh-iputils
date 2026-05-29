@@ -11,6 +11,7 @@
 
 #include "../brightspace.h"
 #include "../brightlink_glue.h"
+#include "../iputils_color.h"
 
 static void print_stats(const char *dest,
                         double min_ms, double avg_ms,
@@ -18,27 +19,54 @@ static void print_stats(const char *dest,
                         int have_ecef, double ecef_mbm,
                         const bs_geo_t *my_geo, const bs_geo_t *tgt_geo)
 {
+    const ipu_colors_t *c = &ipu_colors;
     double floor_mbm = avg_ms / 2.0;
 
-    printf("bping %s:\n", dest);
-    printf("  rtt min/avg/max/mdev  = %.3f/%.3f/%.3f/%.3f ms\n",
-           min_ms, avg_ms, max_ms, mdev_ms);
-    printf("  rtt min/avg/max/mdev  = %.8f/%.8f/%.8f/%.8f md\n",
-           bs_to_md(min_ms), bs_to_md(avg_ms),
-           bs_to_md(max_ms), bs_to_md(mdev_ms));
-    printf("  light-floor (RTT/2)   = %.3f mBM  (~%.0f km)\n",
-           floor_mbm, bs_mbm_to_km(floor_mbm));
+    printf("%sbping %s:%s\n", IPU(c, title), dest, IPU(c, reset));
+    printf("  ");
+    ipu_fprint_label(stdout, c, c->label, "rtt min/avg/max/mdev", 22);
+    printf("  = %s%.3f%s/%s%.3f%s/%s%.3f%s/%s%.3f%s %sms%s\n",
+           IPU(c, value), min_ms, IPU(c, reset),
+           IPU(c, value), avg_ms, IPU(c, reset),
+           IPU(c, value), max_ms, IPU(c, reset),
+           IPU(c, value), mdev_ms, IPU(c, reset),
+           IPU(c, unit), IPU(c, reset));
+    printf("  ");
+    ipu_fprint_label(stdout, c, c->label, "rtt min/avg/max/mdev", 22);
+    printf("  = %s%.8f%s/%s%.8f%s/%s%.8f%s/%s%.8f%s %smd%s\n",
+           IPU(c, value), bs_to_md(min_ms), IPU(c, reset),
+           IPU(c, value), bs_to_md(avg_ms), IPU(c, reset),
+           IPU(c, value), bs_to_md(max_ms), IPU(c, reset),
+           IPU(c, value), bs_to_md(mdev_ms), IPU(c, reset),
+           IPU(c, unit), IPU(c, reset));
+    printf("  ");
+    ipu_fprint_label(stdout, c, c->label, "light-floor (RTT/2)", 22);
+    printf("   = %s%.3f%s %smBM%s  (%s~%.0f km%s)\n",
+           IPU(c, value), floor_mbm, IPU(c, reset),
+           IPU(c, unit), IPU(c, reset),
+           IPU(c, detail), bs_mbm_to_km(floor_mbm), IPU(c, reset));
 
     if (have_ecef) {
         double eff = (floor_mbm > 0.0) ? (ecef_mbm / floor_mbm) * 100.0 : 0.0;
-        printf("  chord dist [ecef]     = %.3f mBM  (~%.0f km)\n",
-               ecef_mbm, bs_mbm_to_km(ecef_mbm));
-        printf("  light-spd limit [ecef]= %.3f ms   (%.8f md)\n",
-               ecef_mbm, bs_to_md(ecef_mbm));
+        const char *estyle = ipu_efficiency_style(c, eff);
+        printf("  ");
+        ipu_fprint_label(stdout, c, c->label, "chord dist [ecef]", 22);
+        printf("     = %s%.3f%s %smBM%s  (%s~%.0f km%s)\n",
+               IPU(c, value), ecef_mbm, IPU(c, reset),
+               IPU(c, unit), IPU(c, reset),
+               IPU(c, detail), bs_mbm_to_km(ecef_mbm), IPU(c, reset));
+        printf("  ");
+        ipu_fprint_label(stdout, c, c->label, "light-spd limit [ecef]", 22);
+        printf("= %s%.3f%s %sms%s   (%s%.8f md%s)\n",
+               IPU(c, value), ecef_mbm, IPU(c, reset),
+               IPU(c, unit), IPU(c, reset),
+               IPU(c, detail), bs_to_md(ecef_mbm), IPU(c, reset));
+        printf("  ");
+        ipu_fprint_label(stdout, c, c->label, "efficiency [ecef]", 22);
+        printf("     = %s%.2f%%%s", estyle, eff, IPU(c, reset));
         if (eff > 100.0)
-            printf("  efficiency [ecef]     = %.2f%%  [warn: exceeds c — check coords]\n", eff);
-        else
-            printf("  efficiency [ecef]     = %.2f%%\n", eff);
+            printf("  %s[warn: exceeds c — check coords]%s", IPU(c, warn), IPU(c, reset));
+        printf("\n");
         return;
     }
 
@@ -47,6 +75,7 @@ static void print_stats(const char *dest,
                                       tgt_geo->lat, tgt_geo->lon);
         double dist = bs_km_to_mbm(km);
         double eff  = (floor_mbm > 0.0) ? (dist / floor_mbm) * 100.0 : 0.0;
+        const char *estyle = ipu_efficiency_style(c, eff);
 
         char src_loc[96] = "", tgt_loc[96] = "";
         bs_geo_label(my_geo,  src_loc, sizeof(src_loc));
@@ -55,33 +84,55 @@ static void print_stats(const char *dest,
         char src_ecef[48], tgt_ecef[48];
         bs_geo_ecef_str(my_geo,  src_ecef, sizeof(src_ecef));
         bs_geo_ecef_str(tgt_geo, tgt_ecef, sizeof(tgt_ecef));
-        printf("  src %-18s  %s%s%s%s\n",
-               my_geo->tag, src_ecef,
-               src_loc[0] ? "  (" : "", src_loc, src_loc[0] ? ")" : "");
-        printf("  tgt %-18s  %s%s%s%s\n",
-               tgt_geo->tag, tgt_ecef,
-               tgt_loc[0] ? "  (" : "", tgt_loc, tgt_loc[0] ? ")" : "");
-        printf("  geo distance          = %.3f mBM  (~%.0f km)\n", dist, km);
-        printf("  light-spd limit       = %.3f ms   (%.8f md)\n",
-               dist, bs_to_md(dist));
+        printf("  src %s%-18s%s %s%s%s",
+               IPU(c, tag), my_geo->tag, IPU(c, reset),
+               IPU(c, value), src_ecef, IPU(c, reset));
+        if (src_loc[0])
+            printf("  %s(%s)%s", IPU(c, location), src_loc, IPU(c, reset));
+        printf("\n");
+        printf("  tgt %s%-18s%s %s%s%s",
+               IPU(c, tag), tgt_geo->tag, IPU(c, reset),
+               IPU(c, value), tgt_ecef, IPU(c, reset));
+        if (tgt_loc[0])
+            printf("  %s(%s)%s", IPU(c, location), tgt_loc, IPU(c, reset));
+        printf("\n");
+        printf("  ");
+        ipu_fprint_label(stdout, c, c->label, "geo distance", 22);
+        printf("          = %s%.3f%s %smBM%s  (%s~%.0f km%s)\n",
+               IPU(c, value), dist, IPU(c, reset),
+               IPU(c, unit), IPU(c, reset),
+               IPU(c, detail), km, IPU(c, reset));
+        printf("  ");
+        ipu_fprint_label(stdout, c, c->label, "light-spd limit", 22);
+        printf("       = %s%.3f%s %sms%s   (%s%.8f md%s)\n",
+               IPU(c, value), dist, IPU(c, reset),
+               IPU(c, unit), IPU(c, reset),
+               IPU(c, detail), bs_to_md(dist), IPU(c, reset));
+        printf("  ");
+        ipu_fprint_label(stdout, c, c->label, "efficiency", 22);
+        printf("            = %s%.2f%%%s", estyle, eff, IPU(c, reset));
         if (eff > 100.0)
-            printf("  efficiency            = %.2f%%  [warn: exceeds c — geoIP may be off]\n", eff);
-        else
-            printf("  efficiency            = %.2f%%\n", eff);
+            printf("  %s[warn: exceeds c — geoIP may be off]%s", IPU(c, warn), IPU(c, reset));
+        printf("\n");
     }
 }
 
 static void print_hops(const char *dest)
 {
+    const ipu_colors_t *c = &ipu_colors;
     char cmd[512];
     snprintf(cmd, sizeof(cmd), "traceroute -q 3 -m 30 %s 2>&1", dest);
     FILE *fp = popen(cmd, "r");
     if (!fp) { fprintf(stderr, "bping: could not run traceroute\n"); return; }
 
-    printf("\nPer-hop trace:\n");
-    printf("  %-4s  %-40s  %-20s  %10s  %12s  %16s\n",
-           "hop", "host", "location",
-           "rtt (ms)", "rtt (md)", "floor (mBM/km)");
+    printf("\n%sPer-hop trace:%s\n", IPU(c, title), IPU(c, reset));
+    printf("  %s%-4s%s  %s%-40s%s  %s%-20s%s  %s%-10s%s  %s%-12s%s  %s%-16s%s\n",
+           IPU(c, header), "hop", IPU(c, reset),
+           IPU(c, header), "host", IPU(c, reset),
+           IPU(c, header), "location", IPU(c, reset),
+           IPU(c, header), "rtt (ms)", IPU(c, reset),
+           IPU(c, header), "rtt (md)", IPU(c, reset),
+           IPU(c, header), "floor (mBM/km)", IPU(c, reset));
     printf("  %-4s  %-40s  %-20s  %10s  %12s  %16s\n",
            "----", "----------------------------------------",
            "--------------------",
@@ -113,13 +164,22 @@ static void print_hops(const char *dest)
         }
 
         if (avg < 0.0) {
-            printf("  %-4d  %-40s  %-20s  %10s\n", hop, host, loc, "timeout");
+            printf("  %s%-4d%s  %s%-40s%s  %s%-20s%s  %s%10s%s\n",
+                   IPU(c, hop), hop, IPU(c, reset),
+                   IPU(c, host), host, IPU(c, reset),
+                   IPU(c, location), loc, IPU(c, reset),
+                   IPU(c, bad), "timeout", IPU(c, reset));
         } else {
             char floorbuf[24];
             snprintf(floorbuf, sizeof(floorbuf), "%.3f/~%.0f",
                      avg / 2.0, avg / 2.0 * BS_KM_PER_MBM);
-            printf("  %-4d  %-40s  %-20s  %10.3f  %12.8f  %16s\n",
-                   hop, host, loc, avg, bs_to_md(avg), floorbuf);
+            printf("  %s%-4d%s  %s%-40s%s  %s%-20s%s  %s%10.3f%s  %s%12.8f%s  %s%16s%s\n",
+                   IPU(c, hop), hop, IPU(c, reset),
+                   IPU(c, host), host, IPU(c, reset),
+                   IPU(c, location), loc, IPU(c, reset),
+                   IPU(c, rtt), avg, IPU(c, reset),
+                   IPU(c, detail), bs_to_md(avg), IPU(c, reset),
+                   IPU(c, value), floorbuf, IPU(c, reset));
         }
     }
     pclose(fp);
@@ -144,6 +204,7 @@ static void usage(void)
         "\nOther flags:\n"
         "  --hops                    Per-hop trace with BrightDate units + geoIP\n"
         "  --reset-brightlink-pin    Forget the BrightNexus TOFU pin and exit\n"
+        IPU_COLOR_USAGE
         "  -h, --help                Show this help\n"
         "\nCoordinate source priority:\n"
         "  --my-ecef > --my-coord > BrightNexus bridge > auto-geoIP\n"
@@ -154,6 +215,7 @@ static void usage(void)
 int main(int argc, char **argv)
 {
     bl_glue_handle_global_args(argc, argv);
+    ipu_color_init(&argc, argv);
 
     bs_ecef_t my_ecef, tgt_ecef;
     memset(&my_ecef,  0, sizeof(my_ecef));

@@ -23,6 +23,7 @@
 
 #include "../brightspace.h"
 #include "../brightlink_glue.h"
+#include "../iputils_color.h"
 #include <signal.h>
 #include <time.h>
 #include <unistd.h>
@@ -154,22 +155,36 @@ static void probe_hop(bmtr_hop_t *h)
 static void draw_table(const char *dest, const bmtr_hop_t *hops, int nhops,
                        int cycle, const bs_geo_t *my_geo)
 {
+    const ipu_colors_t *c = &ipu_colors;
+
     /* Move cursor to top-left (for in-place refresh after first draw) */
     printf("\033[H");
 
-    printf("bmtr — %s    cycle %d    (Ctrl+C to stop)\n", dest, cycle);
+    printf("%sbmtr — %s%s    %scycle %d%s    (Ctrl+C to stop)\n",
+           IPU(c, title), dest, IPU(c, reset),
+           IPU(c, label), cycle, IPU(c, reset));
     if (my_geo && my_geo->valid) {
         char lbl[80] = "", ecef[48];
         bs_geo_label(my_geo, lbl, sizeof(lbl));
         bs_geo_ecef_str(my_geo, ecef, sizeof(ecef));
-        printf("src %-18s %s%s%s%s\n",
-               my_geo->tag, ecef,
-               lbl[0] ? "  (" : "", lbl, lbl[0] ? ")" : "");
+        printf("src %s%-18s%s %s%s%s",
+               IPU(c, tag), my_geo->tag, IPU(c, reset),
+               IPU(c, value), ecef, IPU(c, reset));
+        if (lbl[0])
+            printf("  %s(%s)%s", IPU(c, location), lbl, IPU(c, reset));
+        printf("\n");
     }
     printf("\n");
-    printf("  %-4s  %-38s  %-20s  %6s  %8s  %8s  %8s  %10s  %10s\n",
-           "hop", "host", "location",
-           "loss%", "avg(ms)", "avg(md)", "stddev", "floor(mBM)", "floor(km)");
+    printf("  %s%-4s%s  %s%-38s%s  %s%-20s%s  %s%-6s%s  %s%-8s%s  %s%-8s%s  %s%-8s%s  %s%-10s%s  %s%-10s%s\n",
+           IPU(c, header), "hop", IPU(c, reset),
+           IPU(c, header), "host", IPU(c, reset),
+           IPU(c, header), "location", IPU(c, reset),
+           IPU(c, header), "loss%", IPU(c, reset),
+           IPU(c, header), "avg(ms)", IPU(c, reset),
+           IPU(c, header), "avg(md)", IPU(c, reset),
+           IPU(c, header), "stddev", IPU(c, reset),
+           IPU(c, header), "floor(mBM)", IPU(c, reset),
+           IPU(c, header), "floor(km)", IPU(c, reset));
     printf("  %-4s  %-38s  %-20s  %6s  %8s  %8s  %8s  %10s  %10s\n",
            "----", "--------------------------------------",
            "--------------------",
@@ -181,20 +196,30 @@ static void draw_table(const char *dest, const bmtr_hop_t *hops, int nhops,
 
         double loss_pct = (h->nprobes > 0)
             ? (double)h->ntimeout / h->nprobes * 100.0 : 100.0;
+        const char *loss_style = ipu_loss_style(c, loss_pct);
 
         if (h->nsamp == 0) {
-            printf("  %-4d  %-38s  %-20s  %5.1f%%  %8s  %8s  %8s  %10s  %10s\n",
-                   h->num, h->host, h->loc, loss_pct,
+            printf("  %s%-4d%s  %s%-38s%s  %s%-20s%s  %s%5.1f%%%s  %8s  %8s  %8s  %10s  %10s\n",
+                   IPU(c, hop), h->num, IPU(c, reset),
+                   IPU(c, host), h->host, IPU(c, reset),
+                   IPU(c, location), h->loc, IPU(c, reset),
+                   loss_style, loss_pct, IPU(c, reset),
                    "?", "?", "?", "?", "?");
         } else {
             double avg    = hop_avg(h);
             double stddev = hop_stddev(h);
             double floor_mbm = avg / 2.0;
             double floor_km  = bs_mbm_to_km(floor_mbm);
-            printf("  %-4d  %-38s  %-20s  %5.1f%%  %8.3f  %8.6f  %8.3f  %10.4f  %10.1f\n",
-                   h->num, h->host, h->loc, loss_pct,
-                   avg, bs_to_md(avg), stddev,
-                   floor_mbm, floor_km);
+            printf("  %s%-4d%s  %s%-38s%s  %s%-20s%s  %s%5.1f%%%s  %s%8.3f%s  %s%8.6f%s  %s%8.3f%s  %s%10.4f%s  %s%10.1f%s\n",
+                   IPU(c, hop), h->num, IPU(c, reset),
+                   IPU(c, host), h->host, IPU(c, reset),
+                   IPU(c, location), h->loc, IPU(c, reset),
+                   loss_style, loss_pct, IPU(c, reset),
+                   IPU(c, rtt), avg, IPU(c, reset),
+                   IPU(c, detail), bs_to_md(avg), IPU(c, reset),
+                   IPU(c, value), stddev, IPU(c, reset),
+                   IPU(c, value), floor_mbm, IPU(c, reset),
+                   IPU(c, detail), floor_km, IPU(c, reset));
         }
     }
     printf("\033[J");  /* clear to end of screen (erase old lines on resize) */
@@ -204,19 +229,33 @@ static void draw_table(const char *dest, const bmtr_hop_t *hops, int nhops,
 static void draw_report(const char *dest, const bmtr_hop_t *hops, int nhops,
                         int cycles, const bs_geo_t *my_geo)
 {
-    printf("bmtr report — %s    %d cycles\n", dest, cycles);
+    const ipu_colors_t *c = &ipu_colors;
+
+    printf("%sbmtr report — %s%s    %s%d cycles%s\n",
+           IPU(c, title), dest, IPU(c, reset),
+           IPU(c, label), cycles, IPU(c, reset));
     if (my_geo && my_geo->valid) {
         char lbl[80] = "", ecef[48];
         bs_geo_label(my_geo, lbl, sizeof(lbl));
         bs_geo_ecef_str(my_geo, ecef, sizeof(ecef));
-        printf("src %-18s %s%s%s%s\n",
-               my_geo->tag, ecef,
-               lbl[0] ? "  (" : "", lbl, lbl[0] ? ")" : "");
+        printf("src %s%-18s%s %s%s%s",
+               IPU(c, tag), my_geo->tag, IPU(c, reset),
+               IPU(c, value), ecef, IPU(c, reset));
+        if (lbl[0])
+            printf("  %s(%s)%s", IPU(c, location), lbl, IPU(c, reset));
+        printf("\n");
     }
     printf("\n");
-    printf("  %-4s  %-38s  %-20s  %6s  %8s  %8s  %8s  %8s  %10s\n",
-           "hop", "host", "location",
-           "loss%", "min(ms)", "avg(ms)", "max(ms)", "avg(md)", "floor(mBM)");
+    printf("  %s%-4s%s  %s%-38s%s  %s%-20s%s  %s%-6s%s  %s%-8s%s  %s%-8s%s  %s%-8s%s  %s%-8s%s  %s%-10s%s\n",
+           IPU(c, header), "hop", IPU(c, reset),
+           IPU(c, header), "host", IPU(c, reset),
+           IPU(c, header), "location", IPU(c, reset),
+           IPU(c, header), "loss%", IPU(c, reset),
+           IPU(c, header), "min(ms)", IPU(c, reset),
+           IPU(c, header), "avg(ms)", IPU(c, reset),
+           IPU(c, header), "max(ms)", IPU(c, reset),
+           IPU(c, header), "avg(md)", IPU(c, reset),
+           IPU(c, header), "floor(mBM)", IPU(c, reset));
     printf("  %-4s  %-38s  %-20s  %6s  %8s  %8s  %8s  %8s  %10s\n",
            "----", "--------------------------------------",
            "--------------------",
@@ -226,16 +265,28 @@ static void draw_report(const char *dest, const bmtr_hop_t *hops, int nhops,
         const bmtr_hop_t *h = &hops[i];
         double loss_pct = (h->nprobes > 0)
             ? (double)h->ntimeout / h->nprobes * 100.0 : 100.0;
+        const char *loss_style = ipu_loss_style(c, loss_pct);
 
         if (h->nsamp == 0) {
-            printf("  %-4d  %-38s  %-20s  %5.1f%%  %8s  %8s  %8s  %8s  %10s\n",
-                   h->num, h->host, h->loc, loss_pct, "?","?","?","?","?");
+            printf("  %s%-4d%s  %s%-38s%s  %s%-20s%s  %s%5.1f%%%s  %8s  %8s  %8s  %8s  %10s\n",
+                   IPU(c, hop), h->num, IPU(c, reset),
+                   IPU(c, host), h->host, IPU(c, reset),
+                   IPU(c, location), h->loc, IPU(c, reset),
+                   loss_style, loss_pct, IPU(c, reset),
+                   "?", "?", "?", "?", "?");
         } else {
             double avg      = hop_avg(h);
             double floor_mbm = avg / 2.0;
-            printf("  %-4d  %-38s  %-20s  %5.1f%%  %8.3f  %8.3f  %8.3f  %8.6f  %10.4f\n",
-                   h->num, h->host, h->loc, loss_pct,
-                   h->smin, avg, h->smax, bs_to_md(avg), floor_mbm);
+            printf("  %s%-4d%s  %s%-38s%s  %s%-20s%s  %s%5.1f%%%s  %s%8.3f%s  %s%8.3f%s  %s%8.3f%s  %s%8.6f%s  %s%10.4f%s\n",
+                   IPU(c, hop), h->num, IPU(c, reset),
+                   IPU(c, host), h->host, IPU(c, reset),
+                   IPU(c, location), h->loc, IPU(c, reset),
+                   loss_style, loss_pct, IPU(c, reset),
+                   IPU(c, value), h->smin, IPU(c, reset),
+                   IPU(c, rtt), avg, IPU(c, reset),
+                   IPU(c, value), h->smax, IPU(c, reset),
+                   IPU(c, detail), bs_to_md(avg), IPU(c, reset),
+                   IPU(c, value), floor_mbm, IPU(c, reset));
         }
     }
 }
@@ -251,6 +302,7 @@ static void usage(void)
         "  -m <maxhops>         Max hops (default: 30)\n"
         "  --report             Print final report instead of live display\n"
         "  --reset-brightlink-pin Forget the BrightNexus TOFU pin and exit\n"
+        IPU_COLOR_USAGE
         "\nCoordinate flags (go into shell history):\n"
         "  --my-ecef=x,y,z      My ECEF position (BrightMeters)\n"
         "  --my-coord=lat,lon    My position (decimal degrees)\n"
@@ -264,6 +316,7 @@ static void usage(void)
 int main(int argc, char **argv)
 {
     bl_glue_handle_global_args(argc, argv);
+    ipu_color_init(&argc, argv);
 
     bs_ecef_t my_ecef;
     memset(&my_ecef, 0, sizeof(my_ecef));

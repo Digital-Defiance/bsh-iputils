@@ -14,6 +14,7 @@
 
 #include "../brightspace.h"
 #include "../brightlink_glue.h"
+#include "../iputils_color.h"
 
 #define MAX_HOPS 30
 
@@ -41,13 +42,17 @@ static void usage(void)
         "  -m <maxhops>              Maximum number of hops (default: 30)\n"
         "  -q <nqueries>             Queries per hop (default: 3)\n"
         "  --reset-brightlink-pin    Forget the BrightNexus TOFU pin and exit\n"
+        IPU_COLOR_USAGE
         "  -h, --help                Show this help\n");
     exit(2);
 }
 
 int main(int argc, char **argv)
 {
+    const ipu_colors_t *c;
     bl_glue_handle_global_args(argc, argv);
+    ipu_color_init(&argc, argv);
+    c = &ipu_colors;
 
     bs_ecef_t my_ecef;
     memset(&my_ecef, 0, sizeof(my_ecef));
@@ -107,14 +112,14 @@ int main(int argc, char **argv)
     bl_glue_annotate_tag(&my_geo);
 
     /* Print header */
-    printf("btraceroute to %s", dest);
+    printf("%sbtraceroute to %s%s", IPU(c, title), dest, IPU(c, reset));
     if (dest_ip[0] && strcmp(dest_ip, dest) != 0)
         printf(" (%s)", dest_ip);
     if (tgt_geo.valid) {
         char lbl[96] = "";
         bs_geo_label(&tgt_geo, lbl, sizeof(lbl));
-        if (lbl[0]) printf(", %s", lbl);
-        printf(" %s", tgt_geo.tag);
+        if (lbl[0]) printf(", %s%s%s", IPU(c, location), lbl, IPU(c, reset));
+        printf(" %s%s%s", IPU(c, tag), tgt_geo.tag, IPU(c, reset));
     }
     printf("\n");
 
@@ -123,15 +128,23 @@ int main(int argc, char **argv)
         bs_geo_label(&my_geo, lbl, sizeof(lbl));
         char ecef[48];
         bs_geo_ecef_str(&my_geo, ecef, sizeof(ecef));
-        printf("src %-18s %s%s%s%s\n",
-               my_geo.tag, ecef,
-               lbl[0] ? "  (" : "", lbl, lbl[0] ? ")" : "");
+        printf("src %s%-18s%s %s%s%s",
+               IPU(c, tag), my_geo.tag, IPU(c, reset),
+               IPU(c, value), ecef, IPU(c, reset));
+        if (lbl[0])
+            printf("  %s(%s)%s", IPU(c, location), lbl, IPU(c, reset));
+        printf("\n");
     }
 
     /* Column header */
     printf("\n");
-    printf("  %-4s  %-42s  %-22s  %9s  %11s  %14s\n",
-           "hop", "host", "location", "rtt (ms)", "rtt (md)", "floor(mBM/km)");
+    printf("  %s%-4s%s  %s%-42s%s  %s%-22s%s  %s%-9s%s  %s%-11s%s  %s%-14s%s\n",
+           IPU(c, header), "hop", IPU(c, reset),
+           IPU(c, header), "host", IPU(c, reset),
+           IPU(c, header), "location", IPU(c, reset),
+           IPU(c, header), "rtt (ms)", IPU(c, reset),
+           IPU(c, header), "rtt (md)", IPU(c, reset),
+           IPU(c, header), "floor(mBM/km)", IPU(c, reset));
     printf("  %-4s  %-42s  %-22s  %9s  %11s  %14s\n",
            "----", "------------------------------------------",
            "----------------------",
@@ -172,15 +185,22 @@ int main(int argc, char **argv)
         }
 
         if (h->avg_ms < 0.0) {
-            printf("  %-4d  %-42s  %-22s  %9s\n",
-                   h->num, h->host, loc, "timeout");
+            printf("  %s%-4d%s  %s%-42s%s  %s%-22s%s  %s%9s%s\n",
+                   IPU(c, hop), h->num, IPU(c, reset),
+                   IPU(c, host), h->host, IPU(c, reset),
+                   IPU(c, location), loc, IPU(c, reset),
+                   IPU(c, bad), "timeout", IPU(c, reset));
         } else {
             char floorbuf[20];
             snprintf(floorbuf, sizeof(floorbuf), "%.3f/~%.0f",
                      h->avg_ms / 2.0, h->avg_ms / 2.0 * BS_KM_PER_MBM);
-            printf("  %-4d  %-42s  %-22s  %9.3f  %11.8f  %14s\n",
-                   h->num, h->host, loc,
-                   h->avg_ms, bs_to_md(h->avg_ms), floorbuf);
+            printf("  %s%-4d%s  %s%-42s%s  %s%-22s%s  %s%9.3f%s  %s%11.8f%s  %s%14s%s\n",
+                   IPU(c, hop), h->num, IPU(c, reset),
+                   IPU(c, host), h->host, IPU(c, reset),
+                   IPU(c, location), loc, IPU(c, reset),
+                   IPU(c, rtt), h->avg_ms, IPU(c, reset),
+                   IPU(c, detail), bs_to_md(h->avg_ms), IPU(c, reset),
+                   IPU(c, value), floorbuf, IPU(c, reset));
         }
         nhops++;
     }
@@ -218,22 +238,38 @@ int main(int argc, char **argv)
 
     if (direct_km > 0.0) {
         double direct_mbm = bs_km_to_mbm(direct_km);
-        printf("  direct geo distance   = %.3f mBM  (~%.0f km)\n",
-               direct_mbm, direct_km);
+        printf("  ");
+        ipu_fprint_label(stdout, c, c->label, "direct geo distance", 22);
+        printf("   = %s%.3f%s %smBM%s  (%s~%.0f km%s)\n",
+               IPU(c, value), direct_mbm, IPU(c, reset),
+               IPU(c, unit), IPU(c, reset),
+               IPU(c, detail), direct_km, IPU(c, reset));
         if (floor_mbm > 0.0) {
             double eff = (direct_mbm / floor_mbm) * 100.0;
-            printf("  light-floor (last hop)= %.3f mBM  (~%.0f km)\n",
-                   floor_mbm, bs_mbm_to_km(floor_mbm));
+            const char *estyle = ipu_efficiency_style(c, eff);
+            printf("  ");
+            ipu_fprint_label(stdout, c, c->label, "light-floor (last hop)", 22);
+            printf("= %s%.3f%s %smBM%s  (%s~%.0f km%s)\n",
+                   IPU(c, value), floor_mbm, IPU(c, reset),
+                   IPU(c, unit), IPU(c, reset),
+                   IPU(c, detail), bs_mbm_to_km(floor_mbm), IPU(c, reset));
+            printf("  ");
+            ipu_fprint_label(stdout, c, c->label, "efficiency", 22);
+            printf("            = %s%.2f%%%s", estyle, eff, IPU(c, reset));
             if (eff > 100.0)
-                printf("  efficiency            = %.2f%%  [warn: exceeds c — geoIP may be off]\n", eff);
-            else
-                printf("  efficiency            = %.2f%%\n", eff);
+                printf("  %s[warn: exceeds c — geoIP may be off]%s",
+                       IPU(c, warn), IPU(c, reset));
+            printf("\n");
         }
     }
     if (path_km > 0.0 && path_segs > 1) {
         double ratio = (direct_km > 0.0) ? path_km / direct_km : 0.0;
-        printf("  geo path length       = %.0f km  (%.2fx direct)\n",
-               path_km, ratio);
+        printf("  ");
+        ipu_fprint_label(stdout, c, c->label, "geo path length", 22);
+        printf("       = %s%.0f%s %skm%s  (%s%.2fx direct%s)\n",
+               IPU(c, value), path_km, IPU(c, reset),
+               IPU(c, unit), IPU(c, reset),
+               IPU(c, detail), ratio, IPU(c, reset));
     }
 
     return 0;

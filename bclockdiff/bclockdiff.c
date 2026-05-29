@@ -28,6 +28,7 @@
 
 #include "../clockdiff.h"
 #include "../iputils_common.h"
+#include "../iputils_color.h"
 
 /* BrightDate output support */
 
@@ -81,6 +82,7 @@ static void usage(int exit_status)
 		"  -I            alias of --time-format=iso\n"
 		"  -B, --brightdate         output also in BrightDate units\n"
 		"  --unit=<d|ud|nd>        select BrightDate output unit (default: ud)\n"
+		IPU_COLOR_USAGE
 		"  -h, --help    display this help\n"
 		"  -V, --version print version and exit\n"
 		"  <destination> DNS name or IP address\n"
@@ -175,6 +177,7 @@ int main(int argc, char **argv)
 
 	atexit(close_stdout);
 
+	ipu_color_init(&argc, argv);
 	parse_opts(&ctl, &bopts, argc, argv);
 	argc -= optind;
 	argv += optind;
@@ -261,6 +264,7 @@ int main(int argc, char **argv)
 		time_t now = time(NULL);
 
 		if (ctl.interactive) {
+			const ipu_colors_t *c = &ipu_colors;
 			char s[32];
 			struct tm tm;
 
@@ -270,14 +274,30 @@ int main(int argc, char **argv)
 			else
 				strftime(s, sizeof(s), "%a %b %e %H:%M:%S %Y", &tm);
 
-			printf("\nhost=%s rtt=%ld(%ld)ms/%ldms delta=%dms/%dms %s\n",
-			       ctl.hisname, ctl.rtt, ctl.rtt_sigma, ctl.min_rtt,
-			       ctl.measure_delta, ctl.measure_delta1, s);
+			printf("\n");
+			ipu_fprint_label(stdout, c, c->label, "host", 5);
+			printf("=%s%s%s ", IPU(c, value), ctl.hisname, IPU(c, reset));
+			ipu_fprint_label(stdout, c, c->rtt, "rtt", 4);
+			printf("=%s%ld%s(%s%ld%s)%sms%s/%s%ld%sms ",
+			       IPU(c, value), ctl.rtt, IPU(c, reset),
+			       IPU(c, detail), ctl.rtt_sigma, IPU(c, reset),
+			       IPU(c, unit), IPU(c, reset),
+			       IPU(c, value), ctl.min_rtt, IPU(c, reset));
+			ipu_fprint_label(stdout, c, c->warn, "delta", 6);
+			printf("=%s%d%sms/%s%d%sms %s%s%s\n",
+			       IPU(c, value), ctl.measure_delta, IPU(c, reset),
+			       IPU(c, value), ctl.measure_delta1, IPU(c, reset),
+			       IPU(c, tag), s, IPU(c, reset));
 			if (bopts.use_brightdate) {
-				printf("BrightDate: rtt=%.9f%s delta=%.9f%s\n",
+				printf("%sBrightDate:%s rtt=%s%.9f%s%s delta=%s%.9f%s%s\n",
+				       IPU(c, title), IPU(c, reset),
+				       IPU(c, value),
 				       ms_to_brightdate(ctl.rtt, bopts.unit),
+				       IPU(c, reset),
 				       brightdate_unit_str(bopts.unit),
+				       IPU(c, value),
 				       ms_to_brightdate(ctl.measure_delta, bopts.unit),
+				       IPU(c, reset),
 				       brightdate_unit_str(bopts.unit));
 			}
 		} else {

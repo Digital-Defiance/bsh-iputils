@@ -1,3 +1,11 @@
+bright-iputils (20260529-1) unstable; urgency=medium
+
+  * Add terminal color output to all b* tools (auto, ansi, truecolor, plain).
+  * Shared iputils_color module with NO_COLOR, CLICOLOR, and COLORTERM
+    detection; --color, --no-color, and --color-scheme on every b* tool.
+
+ -- Jessica <jessica@digitaldefiance.org>  Thu, 29 May 2026 12:00:00 +0000
+
 bright-iputils (20260524-1) unstable; urgency=medium
 
   * vendoring process
