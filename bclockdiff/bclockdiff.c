@@ -199,14 +199,11 @@ int main(int argc, char **argv)
 	status = getaddrinfo(argv[0], NULL, &hints, &result);
 	if (status)
 		error(1, 0, "%s: %s", argv[0], gai_strerror(status));
-	ctl.hisname = strdup(result->ai_canonname);
+	ctl.hisname = strdup(result->ai_canonname && result->ai_canonname[0]
+			     ? result->ai_canonname : argv[0]);
 
 	memcpy(&ctl.server, result->ai_addr, sizeof ctl.server);
 	freeaddrinfo(result);
-
-	if (connect(ctl.sock_raw, (struct sockaddr *)&ctl.server,
-		    sizeof(ctl.server)) == -1)
-		error(1, errno, "connect");
 
 	if (ctl.ip_opt_len) {
 		struct sockaddr_in myaddr = {0};
@@ -247,14 +244,21 @@ int main(int argc, char **argv)
 
 	switch (measure_status) {
 	case HOSTDOWN:
+#if defined(__APPLE__)
+		error(1, 0,
+		      "%s is down (macOS ICMP timestamp replies are off; "
+		      "try: sudo sysctl -w net.inet.icmp.timestamp=1, or use -o)",
+		      ctl.hisname);
+#else
 		error(1, 0, "%s is down", ctl.hisname);
+#endif
 		break;
 	case NONSTDTIME:
 		error(1, 0, "%s time transmitted in a non-standard format",
 		      ctl.hisname);
 		break;
 	case UNREACHABLE:
-		error(1, 0, "%s is unreachable", ctl.hisname);
+		error(1, errno, "%s is unreachable", ctl.hisname);
 		break;
 	default:
 		break;

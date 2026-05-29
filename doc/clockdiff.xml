@@ -134,6 +134,19 @@ xml:id="man.clockdiff">
     <variablelist remap="TP">
       <varlistentry>
         <listitem>
+          <para>• On macOS, ICMP Timestamp replies are disabled in
+          the kernel by default (<literal>net.inet.icmp.timestamp=0</literal>).
+          To measure localhost or another Mac as the target, enable replies on
+          that host with
+          <literal>sudo sysctl -w net.inet.icmp.timestamp=1</literal>
+          (not persistent across reboot), or use
+          <option>-o</option> to send ICMP Echo with an IP Timestamp option
+          instead. Linux targets are unaffected. Most public hosts do not
+          respond to ICMP Timestamp regardless of platform.</para>
+        </listitem>
+      </varlistentry>
+      <varlistentry>
+        <listitem>
           <para>• Some nodes (Cisco) use non-standard timestamps,
           which is allowed by RFC, but makes timestamps mostly
           useless.</para>

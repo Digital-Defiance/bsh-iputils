@@ -1,3 +1,11 @@
+bright-iputils (20260530-1) unstable; urgency=medium
+
+  * Fix bclockdiff/clockdiff on macOS: segfault on numeric hosts, send path
+    after connect(), raw-socket receive parsing, and privilege drop.
+  * Document macOS ICMP Timestamp reply sysctl and -o fallback.
+
+ -- Jessica <jessica@digitaldefiance.org>  Fri, 30 May 2026 12:00:00 +0000
+
 bright-iputils (20260529-1) unstable; urgency=medium
 
   * Add terminal color output to all b* tools (auto, ansi, truecolor, plain).

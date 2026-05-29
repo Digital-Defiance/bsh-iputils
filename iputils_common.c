@@ -25,6 +25,8 @@ void error(int status, int errnum, const char *format, ...)
 #if defined(__linux__)
 	extern char *program_invocation_name;
 	const char *progname = program_invocation_name;
+#elif !defined(__linux__)
+	const char *progname = getprogname();
 #else
 	const char *progname = iputils_program_name;
 #endif

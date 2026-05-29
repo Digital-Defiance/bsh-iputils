@@ -224,20 +224,42 @@ bclockdiff [options] <destination>
 Microday (`ud`) is the most useful for typical NTP-synchronized systems:
 a 1 ms offset = 11.57 µd, and sub-millisecond offsets resolve clearly.
 
+### Platform notes
+
+**macOS:** Default mode uses ICMP Timestamp (RFC 792). Apple disables
+timestamp *replies* on macOS by default (`net.inet.icmp.timestamp=0`). To
+measure `127.0.0.1` or another Mac as the target, either enable replies on
+that host:
+
+```sh
+sudo sysctl -w net.inet.icmp.timestamp=1   # not persistent across reboot
+```
+
+or use `-o` (ICMP Echo + IP Timestamp option). Linux targets are unaffected.
+Most public NTP/time servers do not respond to ICMP Timestamp regardless of
+platform — use a Linux host on your LAN for testing.
+
 ### Examples
 
 ```sh
-# Standard output (no BrightDate)
-bclockdiff time.cloudflare.com
+# Clock offset vs a Linux host (typical use)
+sudo bclockdiff 192.168.1.10
+
+# Localhost on macOS (requires sysctl on this Mac, or use -o)
+sudo sysctl -w net.inet.icmp.timestamp=1
+sudo bclockdiff 127.0.0.1
+
+# macOS target without sysctl: try echo + IP timestamp mode
+sudo bclockdiff -o some-mac.local
 
 # With BrightDate in microdays (default unit)
-bclockdiff -B time.cloudflare.com
+bclockdiff -B 192.168.1.10
 
 # With BrightDate in nanodays (high precision)
-bclockdiff -B --unit=nd time.cloudflare.com
+sudo bclockdiff -B --unit=nd 192.168.1.10
 
 # ISO time format + BrightDate
-bclockdiff -I -B time.cloudflare.com
+sudo bclockdiff -I -B 192.168.1.10
 ```
 
 ---
