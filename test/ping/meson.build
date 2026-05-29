@@ -5,11 +5,11 @@ message('Build directory is: ' + meson.current_build_dir())
 
 
 foreach t : ['ping-01-basics.t', 'ping-02-errors.t']
-  test(t, find_program(t), args: ping)
+  test(t, find_program(t), args: ping, env: perl_test_env)
 endforeach
 
 # Add bping test
-test('bping-01-basics.t', find_program('bping-01-basics.t'), args: 'bping')
+test('bping-01-basics.t', find_program('bping-01-basics.t'), args: 'bping', env: perl_test_env)
 
 # FIXME: convert to perl
 # GitHub CI does not have working IPv6

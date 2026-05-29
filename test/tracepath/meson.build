@@ -4,5 +4,5 @@
 message('Build directory is: ' + meson.current_build_dir())
 
 foreach t : ['tracepath-01-basic.t']
-  test(t, find_program(t), args: tracepath)
+  test(t, find_program(t), args: tracepath, env: perl_test_env)
 endforeach

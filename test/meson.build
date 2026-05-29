@@ -1,3 +1,7 @@
+# Vendored test/Test/Command.pm for macOS and other systems without perl-Test-Command.
+test_dir = meson.current_source_dir()
+perl_test_env = environment({'PERL5LIB': test_dir})
+
 subdir('bclockdiff')
 subdir('btraceroute')
 subdir('bmtr')

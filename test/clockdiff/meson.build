@@ -4,5 +4,5 @@
 message('Build directory is: ' + meson.current_build_dir())
 
 foreach t : ['clockdiff-01-basic.t']
-  test(t, find_program(t), args: clockdiff)
+  test(t, find_program(t), args: clockdiff, env: perl_test_env)
 endforeach

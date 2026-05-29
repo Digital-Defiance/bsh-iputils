@@ -4,5 +4,5 @@
 message('Build directory is: ' + meson.current_build_dir())
 
 foreach t : ['arping-01-basic.t']
-  test(t, find_program(t), args: arping)
+  test(t, find_program(t), args: arping, env: perl_test_env)
 endforeach
