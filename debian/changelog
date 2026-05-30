@@ -1,3 +1,9 @@
+bright-iputils (20260532-1) unstable; urgency=medium
+
+  * Fix Linux PPA build: include netinet/ip_icmp.h for clockdiff_compat on Linux.
+
+ -- Jessica <jessica@digitaldefiance.org>  Sat, 31 May 2026 12:00:00 +0000
+
 bright-iputils (20260530-1) unstable; urgency=medium
 
   * Fix bclockdiff/clockdiff on macOS: segfault on numeric hosts, send path

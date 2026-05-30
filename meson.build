@@ -9,7 +9,7 @@ project('iputils', 'c',
 		'localstatedir=var',
 	],
 	meson_version : '>=0.56',
-	version : '20260530')
+	version : '20260532')
 
 cc = meson.get_compiler('c')
 

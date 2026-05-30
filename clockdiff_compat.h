@@ -10,6 +10,8 @@
 #include <stdint.h>
 
 #if defined(__linux__)
+# include <netinet/ip.h>
+# include <netinet/ip_icmp.h>
 # define CLOCKDIFF_RECV_INCLUDES_IP 1
 # define CLOCKDIFF_ICMP_ID_NET_ORDER 0
 #else
