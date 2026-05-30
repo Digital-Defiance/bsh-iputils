@@ -1,3 +1,9 @@
+bright-iputils (20260532-2) unstable; urgency=medium
+
+  * Fix PPA packaging: drop redundant .install file; Meson installs binaries.
+
+ -- Jessica <jessica@digitaldefiance.org>  Sat, 31 May 2026 18:00:00 +0000
+
 bright-iputils (20260532-1) unstable; urgency=medium
 
   * Fix Linux PPA build: include netinet/ip_icmp.h for clockdiff_compat on Linux.
